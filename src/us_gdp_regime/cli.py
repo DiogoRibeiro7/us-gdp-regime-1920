@@ -10,6 +10,9 @@ import typer
 from us_gdp_regime.config import load_config
 from us_gdp_regime.pipeline import download_data as pipeline_download_data
 from us_gdp_regime.pipeline import fit_models as pipeline_fit_models
+from us_gdp_regime.pipeline import (
+    make_distributional_analysis as pipeline_make_distributional_analysis,
+)
 from us_gdp_regime.pipeline import make_figures as pipeline_make_figures
 from us_gdp_regime.pipeline import make_fiscal_context as pipeline_make_fiscal_context
 from us_gdp_regime.pipeline import make_tax_effects as pipeline_make_tax_effects
@@ -73,6 +76,14 @@ def make_tax_effects(
 ) -> None:
     """Create dynamic tax-regime effect estimates and figures."""
     _print_outputs(pipeline_make_tax_effects(load_config(config)))
+
+
+@app.command("make-distributional-analysis")
+def make_distributional_analysis(
+    config: ConfigOption = Path("config/default.yaml"),
+) -> None:
+    """Create tax-burden shift and wage/GDP distributional outputs."""
+    _print_outputs(pipeline_make_distributional_analysis(load_config(config)))
 
 
 @app.command()

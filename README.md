@@ -15,6 +15,7 @@ The workflow estimates:
 5. Article-ready tables and figures.
 6. Optional fiscal context: federal debt, budget ratios, and broad tax-regime event windows.
 7. Optional dynamic tax-regime effect estimates with local projections and distributed lags.
+8. Optional distributional analysis: tax-burden shift proxies and GDP per capita versus real wages.
 
 ## Why not use World Bank only?
 
@@ -73,7 +74,8 @@ The scale of the total GDP proxy depends on the population units in the source, 
 │   ├── 02_regression_piecewise_regimes.ipynb
 │   ├── 03_article_figures_tables.ipynb
 │   ├── 04_fiscal_debt_tax_context.ipynb
-│   └── 05_tax_regime_effects.ipynb
+│   ├── 05_tax_regime_effects.ipynb
+│   └── 06_distributional_tax_wage_analysis.ipynb
 ├── pyproject.toml
 ├── src/us_gdp_regime/
 └── tests/
@@ -132,6 +134,7 @@ us-gdp-regimes fit-models --config config/default.yaml
 us-gdp-regimes make-figures --config config/default.yaml
 us-gdp-regimes make-fiscal-context --config config/default.yaml
 us-gdp-regimes make-tax-effects --config config/default.yaml
+us-gdp-regimes make-distributional-analysis --config config/default.yaml
 us-gdp-regimes run --config config/default.yaml
 ```
 
@@ -169,6 +172,22 @@ The tax-effects outputs include both all catalogued tax shocks and a smaller
 subset classified as plausibly exogenous long-run reforms. The latter is the
 more appropriate sample for causal discussion, but it remains model-dependent.
 
+The distributional command compares GDP per capita with real worker earnings
+and builds tax-burden shift proxies from federal receipt composition, statutory
+income-tax rate spreads, and BLS Consumer Expenditure federal income-tax rates
+by income quintile. It writes:
+
+```text
+data/models/distributional_raw_series.csv
+data/models/wage_gdp_gap.csv
+data/models/tax_burden_shift.csv
+data/models/quintile_tax_rates.csv
+data/models/distributional_context.csv
+data/models/distributional_growth_associations.csv
+figures/wage_gdp_gap.png
+figures/tax_burden_shift.png
+```
+
 ## Run tests
 
 ```bash
@@ -199,6 +218,8 @@ Breakpoints are selected using dynamic programming over piecewise constant means
 - Above-mean and below-mean are descriptive labels, not causal claims.
 - Fiscal and tax-regime outputs are descriptive context. Public debt, deficits, receipts, outlays, and tax law respond to GDP shocks and policy choices, so simple correlations, regressions, and event windows should not be read as causal tax or debt effects.
 - Dynamic tax-effect outputs are stronger than same-year event windows because they model delayed responses, but causal interpretation still depends on the narrative tax-shock classification and on using plausibly exogenous events.
+- Distributional outputs distinguish aggregate output from worker buying power. GDP per capita, real median weekly earnings, and real hourly compensation answer different questions and should not be treated as interchangeable welfare measures.
+- Tax-burden shift proxies are not a full incidence model. Payroll taxes, refundable credits, employer incidence, capital income, state/local taxes, and transfers matter for a complete distributional burden estimate.
 
 ## Suggested article question
 

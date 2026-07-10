@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from zipfile import ZipFile
 
 import pandas as pd
@@ -327,3 +327,55 @@ def load_fred_annual_series(
     out = out.sort_values("year").reset_index(drop=True)
     out["source"] = f"fred_{series_id}"
     return out[["year", value_column, "source"]]
+
+
+def load_fred_series_to_annual(
+    csv_path: Path,
+    series_id: str,
+    value_column: str,
+    aggregation: Literal["mean", "sum", "last"] = "mean",
+    start_year: int | None = None,
+    end_year: int | None = None,
+) -> pd.DataFrame:
+    """Load a FRED series and aggregate it to annual frequency.
+
+    This is useful for monthly or quarterly series that need to be merged into
+    the annual GDP-regime workflow. Quarterly seasonally adjusted annual-rate
+    series generally use `mean`; flow series in native period units can use
+    `sum`; stock or rate series can use `last`.
+    """
+    if not csv_path.exists():
+        raise FileNotFoundError(f"FRED CSV file not found: {csv_path}")
+    if aggregation not in {"mean", "sum", "last"}:
+        raise ValueError("aggregation must be one of: mean, sum, last.")
+
+    work = pd.read_csv(csv_path)
+    column_lookup = {str(column).strip().lower(): column for column in work.columns}
+    date_column = column_lookup.get("date", column_lookup.get("observation_date"))
+    series_column = column_lookup.get(series_id.lower())
+    if date_column is None or series_column is None:
+        raise DataSourceError(
+            f"Expected a DATE/observation_date column and {series_id} in FRED CSV. "
+            f"Available columns are {list(work.columns)}."
+        )
+
+    out = work[[date_column, series_column]].copy()
+    out = out.rename(columns={series_column: value_column})
+    out["year"] = pd.to_datetime(out[date_column]).dt.year
+    out[value_column] = pd.to_numeric(out[value_column], errors="coerce")
+    out = out.dropna(subset=[value_column])
+
+    if aggregation == "mean":
+        annual = out.groupby("year", as_index=False).agg({value_column: "mean"})
+    elif aggregation == "sum":
+        annual = out.groupby("year", as_index=False).agg({value_column: "sum"})
+    else:
+        annual = out.groupby("year", as_index=False).agg({value_column: "last"})
+
+    if start_year is not None:
+        annual = annual.loc[annual["year"] >= start_year]
+    if end_year is not None:
+        annual = annual.loc[annual["year"] <= end_year]
+    annual = annual.sort_values("year").reset_index(drop=True)
+    annual["source"] = f"fred_{series_id}"
+    return annual[["year", value_column, "source"]]

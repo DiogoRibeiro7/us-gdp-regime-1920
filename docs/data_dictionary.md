@@ -185,3 +185,72 @@
 | `conf_low` | Lower approximate 95 percent confidence bound. |
 | `conf_high` | Upper approximate 95 percent confidence bound. |
 | `sample` | `all_events` or `plausibly_exogenous`. |
+
+## `data/models/distributional_raw_series.csv`
+
+| Column | Meaning |
+|---|---|
+| `year` | Calendar year. |
+| `real_gdp_per_capita` | BEA real GDP per capita, annualized from FRED quarterly observations. |
+| `real_median_weekly_earnings` | BLS real median usual weekly earnings for full-time wage and salary workers, annualized from FRED quarterly observations. |
+| `real_hourly_compensation` | BLS nonfarm business real hourly compensation index, annualized from FRED quarterly observations. |
+| receipt columns | Federal current tax receipts, personal current taxes, social-insurance contributions, and corporate income taxes. |
+| statutory rate columns | IRS/FRED top and bottom regular individual income-tax bracket rates. |
+| quintile columns | BLS Consumer Expenditure income and federal income-tax amounts by before-tax income quintile. |
+
+## `data/models/wage_gdp_gap.csv`
+
+| Column | Meaning |
+|---|---|
+| GDP/wage level columns | Annual real GDP per capita, real median weekly earnings, and real hourly compensation. |
+| `*_index` | Series indexed to a common base year, usually 1979 when available. |
+| `*_growth` | Annual percent change. |
+| `gdp_per_capita_minus_median_earnings_index` | Real GDP per capita index minus real median weekly earnings index. |
+| `gdp_per_capita_minus_hourly_compensation_index` | Real GDP per capita index minus real hourly compensation index. |
+| `index_base_year` | Base year used for the indexes. |
+
+## `data/models/tax_burden_shift.csv`
+
+| Column | Meaning |
+|---|---|
+| receipt columns | Federal personal, corporate, and social-insurance receipt series. |
+| `social_insurance_share` | Social-insurance contributions as a share of selected federal receipt categories. |
+| `personal_tax_share` | Personal current taxes as a share of selected federal receipt categories. |
+| `corporate_tax_share` | Corporate income taxes as a share of selected federal receipt categories. |
+| `income_corporate_tax_share` | Personal plus corporate taxes as a share of selected federal receipt categories. |
+| `statutory_rate_spread` | Top individual income-tax bracket rate minus bottom bracket rate. |
+| `top_bottom_rate_ratio` | Top individual income-tax bracket rate divided by bottom bracket rate. |
+
+## `data/models/quintile_tax_rates.csv`
+
+| Column | Meaning |
+|---|---|
+| `federal_income_tax_rate_q1` through `q5` | Federal income taxes divided by before-tax income for each income quintile. Negative values can occur when refundable credits exceed tax liability. |
+| `q5_minus_q1_federal_income_tax_rate` | Highest quintile rate minus lowest quintile rate. |
+| `q5_minus_middle_federal_income_tax_rate` | Highest quintile rate minus middle quintile rate. |
+| `q5_minus_bottom80_federal_income_tax_rate` | Highest quintile rate minus the average rate across the bottom four quintiles. |
+
+## `data/models/distributional_context.csv`
+
+| Column | Meaning |
+|---|---|
+| GDP growth columns | Maddison-derived annual GDP growth. |
+| wage/GDP columns | Indexed wage/GDP gap measures from `wage_gdp_gap.csv`. |
+| tax-shift columns | Receipt-composition and statutory progressivity proxies from `tax_burden_shift.csv`. |
+| quintile tax-rate columns | Federal income-tax rates and spreads from `quintile_tax_rates.csv`. |
+
+## `data/models/distributional_growth_associations.csv`
+
+| Column | Meaning |
+|---|---|
+| `outcome` | GDP growth, real median earnings growth, or GDP/wage gap outcome. |
+| `predictor` | Lagged tax-burden shift proxy. |
+| `lag` | Predictor lag, currently one year. |
+| `coefficient` | Single-predictor lagged association coefficient. |
+| `std_error` | HAC standard error. |
+| `p_value` | P-value for the coefficient. |
+| `conf_low` | Lower approximate 95 percent confidence bound. |
+| `conf_high` | Upper approximate 95 percent confidence bound. |
+| `n_observations` | Observations used. |
+| `r_squared` | Regression R-squared. |
+| `model_note` | Causal caveat. |

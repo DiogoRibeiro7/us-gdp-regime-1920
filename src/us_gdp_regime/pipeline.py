@@ -16,7 +16,19 @@ from us_gdp_regime.data_sources import (
     download_maddison_zip_fallback,
     load_fred_annual_real_gdp,
     load_fred_annual_series,
+    load_fred_series_to_annual,
     load_maddison_usa_series,
+)
+from us_gdp_regime.distributional import (
+    DISTRIBUTIONAL_FRED_SERIES,
+    QUINTILE_FEDERAL_TAX_SERIES,
+    QUINTILE_INCOME_SERIES,
+    build_distributional_context,
+    build_quintile_tax_rate_panel,
+    build_tax_burden_shift_panel,
+    build_wage_gdp_gap_panel,
+    fit_distributional_growth_associations,
+    merge_distributional_series,
 )
 from us_gdp_regime.fiscal import (
     FISCAL_FRED_SERIES,
@@ -34,8 +46,10 @@ from us_gdp_regime.plotting import (
     plot_growth_regimes,
     plot_growth_regimes_annotated,
     plot_log_gdp_trend,
+    plot_tax_burden_shift,
     plot_tax_event_growth_windows,
     plot_tax_local_projections,
+    plot_wage_gdp_gap,
 )
 from us_gdp_regime.source_validation import (
     build_growth_comparison,
@@ -426,6 +440,106 @@ def make_tax_effects(config: AppConfig, series: pd.DataFrame | None = None) -> d
         "tax_dynamic_event_study": event_study_path,
         "tax_local_projections_figure": local_projection_figure_path,
         "tax_dynamic_event_study_figure": event_study_figure_path,
+    }
+
+
+def make_distributional_analysis(
+    config: AppConfig,
+    series: pd.DataFrame | None = None,
+) -> dict[str, Path]:
+    """Build tax-burden shift and wage/GDP distributional outputs."""
+    _ensure_directories(config)
+    work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
+
+    frames: dict[str, pd.DataFrame] = {}
+    annual_last = {"top_marginal_income_tax_rate", "bottom_marginal_income_tax_rate"}
+    for variable, series_id in DISTRIBUTIONAL_FRED_SERIES.items():
+        csv_path = config.paths.raw_dir / f"fred_{series_id}.csv"
+        if not csv_path.exists() and config.source.download_if_missing:
+            csv_path = download_fred_series_csv(series_id=series_id, raw_dir=config.paths.raw_dir)
+        if csv_path.exists():
+            frames[variable] = load_fred_series_to_annual(
+                csv_path=csv_path,
+                series_id=series_id,
+                value_column=variable,
+                aggregation="last" if variable in annual_last else "mean",
+                start_year=config.project.start_year,
+                end_year=config.project.end_year,
+            )
+
+    for quintile, series_id in QUINTILE_FEDERAL_TAX_SERIES.items():
+        variable = f"federal_income_tax_{quintile}"
+        csv_path = config.paths.raw_dir / f"fred_{series_id}.csv"
+        if not csv_path.exists() and config.source.download_if_missing:
+            csv_path = download_fred_series_csv(series_id=series_id, raw_dir=config.paths.raw_dir)
+        if csv_path.exists():
+            frames[variable] = load_fred_annual_series(
+                csv_path=csv_path,
+                series_id=series_id,
+                value_column=variable,
+                start_year=config.project.start_year,
+                end_year=config.project.end_year,
+            )
+
+    for quintile, series_id in QUINTILE_INCOME_SERIES.items():
+        variable = f"income_before_tax_{quintile}"
+        csv_path = config.paths.raw_dir / f"fred_{series_id}.csv"
+        if not csv_path.exists() and config.source.download_if_missing:
+            csv_path = download_fred_series_csv(series_id=series_id, raw_dir=config.paths.raw_dir)
+        if csv_path.exists():
+            frames[variable] = load_fred_annual_series(
+                csv_path=csv_path,
+                series_id=series_id,
+                value_column=variable,
+                start_year=config.project.start_year,
+                end_year=config.project.end_year,
+            )
+
+    if not frames:
+        raise FileNotFoundError(
+            "No distributional FRED CSV files are available. Enable source.download_if_missing "
+            "or place the configured FRED CSVs in data/raw."
+        )
+
+    raw_panel = merge_distributional_series(frames)
+    wage_gap = build_wage_gdp_gap_panel(raw_panel)
+    tax_shift = build_tax_burden_shift_panel(raw_panel)
+    quintile_rates = build_quintile_tax_rate_panel(raw_panel)
+    context = build_distributional_context(
+        gdp_growth=work,
+        wage_gap=wage_gap,
+        tax_shift=tax_shift,
+        quintile_rates=quintile_rates,
+    )
+    associations = fit_distributional_growth_associations(context)
+
+    raw_path = config.paths.models_dir / "distributional_raw_series.csv"
+    wage_gap_path = config.paths.models_dir / "wage_gdp_gap.csv"
+    tax_shift_path = config.paths.models_dir / "tax_burden_shift.csv"
+    quintile_rates_path = config.paths.models_dir / "quintile_tax_rates.csv"
+    context_path = config.paths.models_dir / "distributional_context.csv"
+    associations_path = config.paths.models_dir / "distributional_growth_associations.csv"
+    wage_gap_figure_path = config.paths.figures_dir / "wage_gdp_gap.png"
+    tax_shift_figure_path = config.paths.figures_dir / "tax_burden_shift.png"
+
+    raw_panel.to_csv(raw_path, index=False)
+    wage_gap.to_csv(wage_gap_path, index=False)
+    tax_shift.to_csv(tax_shift_path, index=False)
+    quintile_rates.to_csv(quintile_rates_path, index=False)
+    context.to_csv(context_path, index=False)
+    associations.to_csv(associations_path, index=False)
+    plot_wage_gdp_gap(wage_gap, wage_gap_figure_path, dpi=config.plots.dpi)
+    plot_tax_burden_shift(context, tax_shift_figure_path, dpi=config.plots.dpi)
+
+    return {
+        "distributional_raw_series": raw_path,
+        "wage_gdp_gap": wage_gap_path,
+        "tax_burden_shift": tax_shift_path,
+        "quintile_tax_rates": quintile_rates_path,
+        "distributional_context": context_path,
+        "distributional_growth_associations": associations_path,
+        "wage_gdp_gap_figure": wage_gap_figure_path,
+        "tax_burden_shift_figure": tax_shift_figure_path,
     }
 
 

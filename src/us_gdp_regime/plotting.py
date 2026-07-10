@@ -751,3 +751,148 @@ def plot_dynamic_tax_event_study(
     fig.subplots_adjust(left=0.075, right=0.98, top=0.84, bottom=0.14)
     _save(fig, output_path, dpi)
     return output_path
+
+
+def plot_wage_gdp_gap(panel: pd.DataFrame, output_path: Path, dpi: int = 160) -> Path:
+    """Plot real GDP per capita against real median earnings and compensation."""
+    required = {
+        "year",
+        "real_gdp_per_capita_index",
+        "real_median_weekly_earnings_index",
+        "gdp_per_capita_minus_median_earnings_index",
+    }
+    missing = required.difference(panel.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    _apply_theme()
+    work = panel.sort_values("year").copy()
+    fig, axes = plt.subplots(2, 1, figsize=(13.5, 8.8), sharex=True)
+    _title(
+        fig,
+        "GDP per capita can rise while median real earnings lag",
+        "Indexes share the same base year; the gap tracks aggregate output "
+        "versus worker buying power.",
+    )
+    for ax in axes:
+        _style_axis(ax)
+
+    axes[0].plot(
+        work["year"],
+        work["real_gdp_per_capita_index"],
+        color=PALETTE["blue"],
+        linewidth=2.7,
+        label="Real GDP per capita",
+    )
+    axes[0].plot(
+        work["year"],
+        work["real_median_weekly_earnings_index"],
+        color=PALETTE["green"],
+        linewidth=2.7,
+        label="Real median weekly earnings",
+    )
+    if "real_hourly_compensation_index" in work.columns:
+        axes[0].plot(
+            work["year"],
+            work["real_hourly_compensation_index"],
+            color=PALETTE["orange"],
+            linewidth=2.2,
+            label="Real hourly compensation",
+        )
+    axes[0].set_ylabel("Index")
+    axes[0].legend(loc="upper left", ncols=3)
+
+    axes[1].fill_between(
+        work["year"],
+        work["gdp_per_capita_minus_median_earnings_index"],
+        color=PALETTE["blue_light"],
+        alpha=0.9,
+    )
+    axes[1].plot(
+        work["year"],
+        work["gdp_per_capita_minus_median_earnings_index"],
+        color=PALETTE["blue"],
+        linewidth=2.5,
+    )
+    axes[1].axhline(0, color=PALETTE["ink"], linewidth=1.0)
+    axes[1].set_xlabel("Year")
+    axes[1].set_ylabel("GDP index minus median earnings index")
+
+    base_year = int(work["index_base_year"].dropna().iloc[0])
+    _source_note(
+        fig,
+        f"Sources: BEA/BLS via FRED. Index base year: {base_year}. "
+        "Median earnings measure workers, not all national income.",
+    )
+    fig.subplots_adjust(left=0.075, right=0.98, top=0.86, bottom=0.10, hspace=0.20)
+    _save(fig, output_path, dpi)
+    return output_path
+
+
+def plot_tax_burden_shift(panel: pd.DataFrame, output_path: Path, dpi: int = 160) -> Path:
+    """Plot tax composition and income-quintile tax-rate spread proxies."""
+    required = {"year", "social_insurance_share", "personal_tax_share", "corporate_tax_share"}
+    missing = required.difference(panel.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    _apply_theme()
+    work = panel.sort_values("year").copy()
+    fig, axes = plt.subplots(3, 1, figsize=(13.5, 10.5), sharex=True)
+    _title(
+        fig,
+        "Tax burden shift proxies combine receipt composition and quintile tax rates",
+        "Social-insurance receipts proxy less-progressive payroll taxation; "
+        "quintile rates show income-tax burden.",
+    )
+    for ax in axes:
+        _style_axis(ax)
+
+    axes[0].plot(work["year"], work["social_insurance_share"], color=PALETTE["red"], linewidth=2.5)
+    axes[0].plot(work["year"], work["personal_tax_share"], color=PALETTE["green"], linewidth=2.5)
+    axes[0].plot(work["year"], work["corporate_tax_share"], color=PALETTE["blue"], linewidth=2.5)
+    axes[0].set_ylabel("Share of selected federal receipts")
+    axes[0].yaxis.set_major_formatter(_percent_formatter())
+    axes[0].legend(["Social insurance", "Personal current taxes", "Corporate income"], loc="best")
+
+    if "statutory_rate_spread" in work.columns:
+        axes[1].plot(
+            work["year"],
+            work["statutory_rate_spread"],
+            color=PALETTE["orange"],
+            linewidth=2.5,
+            label="Top minus bottom statutory income-tax rate",
+        )
+    if "q5_minus_bottom80_federal_income_tax_rate" in work.columns:
+        axes[1].plot(
+            work["year"],
+            work["q5_minus_bottom80_federal_income_tax_rate"],
+            color=PALETTE["blue"],
+            linewidth=2.5,
+            label="Highest quintile minus bottom 80% avg. federal income-tax rate",
+        )
+    axes[1].set_ylabel("Tax-rate spread")
+    axes[1].yaxis.set_major_formatter(_percent_formatter())
+    axes[1].legend(loc="best")
+
+    quintile_columns = [
+        ("federal_income_tax_rate_q1", "Lowest 20%", PALETTE["red"]),
+        ("federal_income_tax_rate_q3", "Middle 20%", PALETTE["gold"]),
+        ("federal_income_tax_rate_q5", "Highest 20%", PALETTE["green"]),
+    ]
+    for column, label, color in quintile_columns:
+        if column in work.columns:
+            axes[2].plot(work["year"], work[column], color=color, linewidth=2.2, label=label)
+    axes[2].set_xlabel("Year")
+    axes[2].set_ylabel("Average federal income-tax rate")
+    axes[2].yaxis.set_major_formatter(_percent_formatter())
+    axes[2].legend(loc="best", ncols=3)
+
+    _source_note(
+        fig,
+        "Sources: BEA, IRS, and BLS Consumer Expenditure Surveys via FRED. "
+        "Receipt shares are proxies, not full distributional tax incidence.",
+    )
+    fig.subplots_adjust(left=0.075, right=0.98, top=0.86, bottom=0.09, hspace=0.24)
+    _save(fig, output_path, dpi)
+    return output_path

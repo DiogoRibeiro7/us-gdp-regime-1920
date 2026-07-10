@@ -92,6 +92,30 @@ subset and still treated as model-dependent. Deficit-reduction packages,
 wartime finance, recession responses, and mixed reforms should not be pooled
 with long-run reforms without showing the classification.
 
+## Distributional tax burden and real wages
+
+The distributional layer separates aggregate output from worker buying power.
+Real GDP per capita is indexed against real median weekly earnings and real
+hourly compensation. A widening index gap means aggregate real output per person
+is rising faster than the real earnings measure.
+
+Tax-burden shifts are measured with three proxies:
+
+1. receipt composition: social-insurance contributions versus personal and
+   corporate income-tax receipts,
+2. statutory progressivity: top minus bottom regular individual income-tax
+   bracket rates,
+3. income-quintile federal income-tax rates from BLS Consumer Expenditure data.
+
+These proxies are useful but incomplete. They do not fully estimate tax
+incidence across income classes. Payroll tax incidence, refundable credits,
+employer-side contributions, corporate tax incidence, capital income, state and
+local taxes, and transfers all matter for a full burden analysis.
+
+The association screen regresses GDP growth, median earnings growth, and the
+GDP/wage gap on one-year-lagged tax-burden proxies. It is designed to flag
+patterns for interpretation, not to establish causality.
+
 ## Historical interpretation
 
 The regimes should be interpreted with historical care. Likely contextual periods include:

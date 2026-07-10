@@ -9,6 +9,7 @@ from us_gdp_regime.data_sources import (
     DataSourceError,
     load_fred_annual_real_gdp,
     load_fred_annual_series,
+    load_fred_series_to_annual,
     load_maddison_usa_series,
 )
 
@@ -124,3 +125,23 @@ def test_load_fred_annual_series_generic_loader(tmp_path: Path) -> None:
     assert list(out["year"]) == [1930, 1931]
     assert list(out["receipts_gdp"]) == [10.5, 11.0]
     assert out.loc[0, "source"] == "fred_FYFRGDA188S"
+
+
+def test_load_fred_series_to_annual_aggregates_quarterly_values(tmp_path: Path) -> None:
+    csv_path = tmp_path / "fred_TEST.csv"
+    pd.DataFrame(
+        {
+            "DATE": ["2000-01-01", "2000-04-01", "2001-01-01", "2001-04-01"],
+            "TEST": [10.0, 14.0, 20.0, 24.0],
+        }
+    ).to_csv(csv_path, index=False)
+
+    out = load_fred_series_to_annual(
+        csv_path=csv_path,
+        series_id="TEST",
+        value_column="test_value",
+        aggregation="mean",
+    )
+
+    assert list(out["year"]) == [2000, 2001]
+    assert list(out["test_value"]) == [12.0, 22.0]

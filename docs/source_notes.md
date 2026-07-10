@@ -43,6 +43,19 @@ Future versions should replace ordinal shock values with estimated revenue
 effects as a percent of GDP and should document announcement, phase-in, and
 sunset timing for each major provision.
 
+## Distributional wage and tax-burden sources
+
+The wage/GDP comparison uses BEA real GDP per capita and BLS real earnings
+series from FRED. Real median weekly earnings are narrower than national income:
+they refer to full-time wage and salary workers and therefore do not capture
+capital income, business income, transfers, or all household members.
+
+The tax-burden shift analysis uses federal receipt composition from BEA/FRED,
+IRS/FRED top and bottom statutory individual income-tax rates, and BLS Consumer
+Expenditure Survey income and federal income-tax amounts by before-tax income
+quintile. The quintile data begin in the 1980s and measure average federal
+income-tax amounts in consumer units, not full federal tax incidence.
+
 ## Practical implication
 
 Use Maddison for the full 1920-onward history. Use FRED/BEA for the modern
