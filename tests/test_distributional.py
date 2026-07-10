@@ -26,9 +26,7 @@ def test_wage_gdp_gap_indexes_to_common_base_year() -> None:
 
     assert out.loc[out["year"].eq(1979), "real_gdp_per_capita_index"].iloc[0] == 100.0
     assert out.loc[out["year"].eq(1980), "real_median_weekly_earnings_index"].iloc[0] == 102.0
-    gap = float(
-        out.loc[out["year"].eq(1980), "gdp_per_capita_minus_median_earnings_index"].iloc[0]
-    )
+    gap = float(out.loc[out["year"].eq(1980), "gdp_per_capita_minus_median_earnings_index"].iloc[0])
     assert round(gap, 6) == 8.0
 
 

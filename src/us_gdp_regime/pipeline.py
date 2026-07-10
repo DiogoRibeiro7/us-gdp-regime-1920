@@ -42,6 +42,7 @@ from us_gdp_regime.fiscal import (
 )
 from us_gdp_regime.inference import (
     bootstrap_break_dates,
+    break_aware_unit_root_tests,
     sequential_break_tests,
     unit_root_diagnostics,
 )
@@ -427,6 +428,7 @@ def _write_inference_outputs(
     growth = work["gdp_growth"].dropna().to_numpy(dtype=float)
 
     unit_root = unit_root_diagnostics(work)
+    unit_root_break = break_aware_unit_root_tests(work)
     selection = segmentation_ssr_path(
         growth,
         min_segment_size=config.model.min_segment_size,
@@ -440,14 +442,17 @@ def _write_inference_outputs(
     )
 
     unit_root_path = models_dir / "unit_root_tests.csv"
+    unit_root_break_path = models_dir / "unit_root_break_tests.csv"
     selection_path = models_dir / "segmentation_selection.csv"
     break_tests_path = models_dir / "break_significance_tests.csv"
     unit_root.to_csv(unit_root_path, index=False)
+    unit_root_break.to_csv(unit_root_break_path, index=False)
     selection.to_csv(selection_path, index=False)
     break_tests.to_csv(break_tests_path, index=False)
 
     outputs = {
         "unit_root_tests": unit_root_path,
+        "unit_root_break_tests": unit_root_break_path,
         "segmentation_selection": selection_path,
         "break_significance_tests": break_tests_path,
     }

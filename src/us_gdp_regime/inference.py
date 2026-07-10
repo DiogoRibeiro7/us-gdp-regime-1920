@@ -25,7 +25,8 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from statsmodels.tsa.stattools import adfuller, kpss
+from arch.unitroot import DFGLS
+from statsmodels.tsa.stattools import adfuller, kpss, zivot_andrews
 
 from us_gdp_regime.models import (
     _run_segmentation_dp,
@@ -126,6 +127,73 @@ def unit_root_diagnostics(df: pd.DataFrame) -> pd.DataFrame:
                 "kpss_rejects_stationarity_5pct": bool(kpss_p < 0.05),
             }
         )
+    return pd.DataFrame(rows)
+
+
+def break_aware_unit_root_tests(df: pd.DataFrame) -> pd.DataFrame:
+    """Run more powerful and break-robust unit-root tests on the log level.
+
+    The plain ADF test has low power against persistent trend-stationary
+    alternatives, and unmodelled breaks bias it toward not rejecting a unit root
+    (Perron, 1989). Two complementary tests address this:
+
+    * the DF-GLS test (Elliott, Rothenberg and Stock, 1996), which GLS-detrends
+      before testing and has substantially more power; and
+    * the Zivot and Andrews (1992) test, whose null is a unit root and whose
+      alternative is trend-stationarity with a single endogenously dated break.
+
+    Reading the three together (ADF/KPSS, DF-GLS, and Zivot-Andrews) shows whether
+    the unit-root verdict for the level is robust or merely a power problem.
+
+    Parameters
+    ----------
+    df:
+        Prepared GDP series with ``year`` and ``log_real_gdp`` columns.
+
+    Returns
+    -------
+    pd.DataFrame
+        One row per test with statistic, p-value, 5% verdict, and the estimated
+        break year for the Zivot-Andrews test.
+    """
+    if "log_real_gdp" not in df.columns or "year" not in df.columns:
+        return pd.DataFrame()
+    work = df[["year", "log_real_gdp"]].dropna()
+    level = pd.to_numeric(work["log_real_gdp"], errors="coerce").to_numpy(dtype=float)
+    years = work["year"].to_numpy(dtype=int)
+    if len(level) < 20:
+        return pd.DataFrame()
+
+    rows: list[dict[str, object]] = []
+
+    dfgls = DFGLS(level, trend="ct")
+    rows.append(
+        {
+            "test": "DF-GLS",
+            "series": "log_real_gdp",
+            "statistic": float(dfgls.stat),
+            "pvalue": float(dfgls.pvalue),
+            "detail": f"lags={int(dfgls.lags)}",
+            "break_year": pd.NA,
+            "rejects_unit_root_5pct": bool(dfgls.pvalue < 0.05),
+        }
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        za_stat, za_p, _crit, _lag, za_break_idx = zivot_andrews(level, trim=0.15, regression="ct")
+    break_year = int(years[int(za_break_idx)]) if 0 <= int(za_break_idx) < len(years) else None
+    rows.append(
+        {
+            "test": "Zivot-Andrews",
+            "series": "log_real_gdp",
+            "statistic": float(za_stat),
+            "pvalue": float(za_p),
+            "detail": "break in intercept and trend",
+            "break_year": break_year if break_year is not None else pd.NA,
+            "rejects_unit_root_5pct": bool(za_p < 0.05),
+        }
+    )
     return pd.DataFrame(rows)
 
 

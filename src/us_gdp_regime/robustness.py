@@ -43,9 +43,7 @@ def _scenario_frame(
         max_breaks=max_breaks,
         criterion=criterion,
     )
-    out = segments[
-        ["segment_id", "start_year", "end_year", "mean_growth", "regime"]
-    ].copy()
+    out = segments[["segment_id", "start_year", "end_year", "mean_growth", "regime"]].copy()
     out.insert(0, "excluded_years", _excluded_years_label(excluded))
     out.insert(0, "min_segment_size", min_segment_size)
     out.insert(0, "criterion", criterion)
@@ -138,9 +136,7 @@ def summarize_recurring_breaks(
     clusters: list[list[tuple[int, str]]] = []
     for year, scenario_id in sorted(break_records):
         current_center = (
-            round(sum(item[0] for item in clusters[-1]) / len(clusters[-1]))
-            if clusters
-            else None
+            round(sum(item[0] for item in clusters[-1]) / len(clusters[-1])) if clusters else None
         )
         if current_center is None or abs(year - current_center) > tolerance:
             clusters.append([])

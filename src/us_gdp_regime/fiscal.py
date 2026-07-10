@@ -215,9 +215,7 @@ def merge_fiscal_series(series_frames: Mapping[str, pd.DataFrame]) -> pd.DataFra
 
         if "source" in frame.columns:
             source_columns.append(
-                frame[["year", "source"]]
-                .copy()
-                .rename(columns={"source": f"{name}_source"})
+                frame[["year", "source"]].copy().rename(columns={"source": f"{name}_source"})
             )
 
     if merged is None:

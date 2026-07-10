@@ -172,6 +172,31 @@ def _add_unit_root(models_dir: Path, numbers: dict[str, str], tables: dict[str, 
         tables["unit_root_table"] = _latex_table_body(rows)
 
 
+def _add_break_unit_root(models_dir: Path, numbers: dict[str, str], tables: dict[str, str]) -> None:
+    df = _read(models_dir, "unit_root_break_tests")
+    if df is None or df.empty:
+        return
+    rows = []
+    for _, row in df.iterrows():
+        detail = str(row["detail"]) if pd.notna(row["detail"]) else ""
+        rows.append(
+            f"    {row['test']} & {_fmt(row['statistic'], 2)} & "
+            f"{_fmt_p(row['pvalue'])} & {detail} \\\\"
+        )
+    tables["break_unit_root_table"] = _latex_table_body(rows)
+
+    dfgls = df.loc[df["test"].eq("DF-GLS")]
+    if not dfgls.empty:
+        numbers["level_dfgls_stat"] = _fmt(dfgls.iloc[0]["statistic"], 2)
+        numbers["level_dfgls_p"] = _fmt_p_math(dfgls.iloc[0]["pvalue"])
+    za = df.loc[df["test"].eq("Zivot-Andrews")]
+    if not za.empty:
+        numbers["za_stat"] = _fmt(za.iloc[0]["statistic"], 2)
+        numbers["za_p"] = _fmt_p_math(za.iloc[0]["pvalue"])
+        if pd.notna(za.iloc[0]["break_year"]):
+            numbers["za_break_year"] = str(int(za.iloc[0]["break_year"]))
+
+
 def _add_break_tests(models_dir: Path, numbers: dict[str, str], tables: dict[str, str]) -> None:
     df = _read(models_dir, "break_significance_tests")
     if df is None or df.empty:
@@ -265,9 +290,7 @@ def _add_robustness(models_dir: Path, numbers: dict[str, str], tables: dict[str,
         low, high = int(row["min_break_year"]), int(row["max_break_year"])
         window = f"{low}" if low == high else f"{low}--{high}"
         count = f"{int(row['n_scenarios'])}/{total}" if total else str(int(row["n_scenarios"]))
-        rows.append(
-            f"    {int(row['representative_break_year'])} & {window} & {count} \\\\"
-        )
+        rows.append(f"    {int(row['representative_break_year'])} & {window} & {count} \\\\")
     tables["robustness_table"] = _latex_table_body(rows)
     most = recurring.loc[recurring["n_scenarios"].idxmax()]
     numbers["most_robust_break_year"] = str(int(most["representative_break_year"]))
@@ -397,6 +420,7 @@ def build_report_numbers(models_dir: Path) -> tuple[dict[str, str], dict[str, st
     _add_trend(models_dir, numbers, tables)
     _add_regimes(models_dir, numbers, tables)
     _add_unit_root(models_dir, numbers, tables)
+    _add_break_unit_root(models_dir, numbers, tables)
     _add_break_tests(models_dir, numbers, tables)
     _add_break_cis(models_dir, numbers, tables)
     _add_postwar(models_dir, numbers, tables)

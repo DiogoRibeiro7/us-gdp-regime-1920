@@ -37,9 +37,10 @@
 We characterise the annual growth process of United States real GDP from 1920
 onward as a sequence of statistically identified regimes rather than a single
 trend. Using a Maddison-based long-run real GDP series validated against BEA
-national accounts, we first show that log GDP is empirically indistinguishable
-from a unit-root process while its growth rate is stationary, so growth---not the
-level---is the appropriate object for regime analysis. A dynamic-programming
+national accounts, we first show that log GDP is highly persistent---standard
+unit-root tests do not reject a unit root, though a more powerful GLS-detrended
+test does---while its growth rate is unambiguously stationary, so growth---not
+the level---is the appropriate object for regime analysis. A dynamic-programming
 segmentation with information-criterion selection identifies $\NumGlobalRegimes$
 global regimes; because a single pooled variance lets the extreme 1929--1945
 episode dominate, we apply a recursive refinement that re-segments each regime on
@@ -79,8 +80,10 @@ Our approach has four components. First, we establish the correct object of
 study. A linear trend fits log real GDP almost perfectly in sample
 ($R^2 = \TrendRSquared$), but that fit is a well-known artefact of persistence:
 augmented Dickey--Fuller \citep{saiddickey1984} and KPSS \citep{kpss1992} tests
-together indicate that the log level is consistent with a unit root while the
-growth rate is stationary. Regimes are therefore estimated on growth. Second, we
+indicate that the log level is highly persistent---though power- and
+break-robust tests (DF-GLS and Zivot--Andrews) disagree on whether it is a unit
+root---while the growth rate is stationary on every test. Regimes are therefore
+estimated on growth. Second, we
 detect regimes with an exact dynamic-programming segmentation of the growth
 series and select their number by information criterion. Because a single global
 variance lets the violent 1929--1945 years dominate, we introduce a recursive
@@ -181,9 +184,12 @@ heteroskedasticity- and autocorrelation-consistent standard errors
 deterministic trend: a near-integrated series is mechanically well fit by a line.
 We therefore test the log level and the growth rate with the augmented
 Dickey--Fuller test \citep{saiddickey1984}, whose null is a unit root, and the
-KPSS test \citep{kpss1992}, whose null is stationarity. We read the two jointly,
-and we note the caution of \citet{perron1989} that unmodelled structural breaks
-bias ADF toward failing to reject a unit root.
+KPSS test \citep{kpss1992}, whose null is stationarity. Because ADF has low power
+and, as \citet{perron1989} shows, unmodelled structural breaks bias it toward
+failing to reject a unit root, we add two break- and power-robust checks on the
+level: the GLS-detrended DF-GLS test \citep{elliott1996}, and the
+\citet{zivotandrews1992} test, whose alternative is trend-stationarity with a
+single endogenously dated break.
 
 \subsection{Growth regimes and recursive refinement}
 
@@ -258,6 +264,16 @@ point formal: for the log level, ADF does not reject a unit root
 $p \GrowthKpssP$). Growth is the stationary object, and the appropriate one for
 regime analysis.
 
+The level's classification is, however, test-dependent
+(Table~\ref{tab:breakunitroot}). The more powerful DF-GLS test \emph{rejects} the
+unit root ($\LevelDfglsStat$, $p \LevelDfglsP$), whereas the Zivot--Andrews test,
+which allows one endogenous break (dated $\ZaBreakYear$), does \emph{not}
+($\ZaStat$, $p \ZaP$). This disagreement is exactly the \citet{perron1989}
+lesson: whether log GDP reads as a unit root or as a broken trend depends on the
+test's power and on how breaks are handled. Nothing in the regime analysis hinges
+on resolving it --- growth is stationary on every test, and is what we model ---
+but it warns against treating the deterministic trend as structural.
+
 \begin{table}[H]
   \centering
   \caption{Log-trend regression of real GDP, 1920--present}
@@ -287,8 +303,28 @@ regime analysis.
   \\[0.4em]
   {\footnotesize\begin{minipage}{0.86\linewidth}
   \textit{Notes.} ADF null: unit root; KPSS null: stationarity. Specification
-  \texttt{ct} includes a constant and trend; \texttt{c} a constant only. Read
-  jointly, the level is difference-stationary and growth is stationary.
+  \texttt{ct} includes a constant and trend; \texttt{c} a constant only. On these
+  two tests the level behaves as difference-stationary and growth as stationary;
+  Table~\ref{tab:breakunitroot} qualifies the level result.
+  \end{minipage}}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  \caption{Power- and break-robust unit-root tests on the log level}
+  \label{tab:breakunitroot}
+  \begin{tabular}{lccl}
+    \toprule
+    Test & Statistic & $p$ & Detail \\
+    \midrule
+    \input{generated_break_unit_root_table.tex}
+  \end{tabular}
+  \\[0.4em]
+  {\footnotesize\begin{minipage}{0.82\linewidth}
+  \textit{Notes.} Null hypothesis: unit root. DF-GLS \citep{elliott1996} is
+  GLS-detrended; Zivot--Andrews \citep{zivotandrews1992} allows one endogenously
+  dated break in intercept and trend. The two disagree, illustrating the
+  \citet{perron1989} power/break caveat.
   \end{minipage}}
 \end{table}
 
@@ -590,7 +626,8 @@ reported by series rather than assumed uniform.
 
 The United States did not grow at one constant speed after 1920. A deterministic
 trend fits the log level in sample but is statistically inappropriate, because the
-level is indistinguishable from a unit-root process while growth is stationary.
+level is at best highly persistent---its unit-root classification is
+test-dependent---while growth is stationary on every test.
 Read through growth, the century resolves into a small number of statistically
 supported regimes: a 1920s expansion, the Depression, wartime mobilisation,
 postwar demobilisation, the postwar boom, and the post-$\PostwarSplitYear$
@@ -671,6 +708,11 @@ Bolt, J. and van Zanden, J. L.
 2020 update.
 \newblock Maddison Project Working Paper WP-15, University of Groningen, 2020.
 
+\bibitem[Elliott et al.(1996)]{elliott1996}
+Elliott, G., Rothenberg, T. J., and Stock, J. H.
+\newblock Efficient tests for an autoregressive unit root.
+\newblock \emph{Econometrica}, 64(4):813--836, 1996.
+
 \bibitem[Fernald(2015)]{fernald2015}
 Fernald, J. G.
 \newblock Productivity and potential output before, during, and after the Great
@@ -727,6 +769,12 @@ Summers, L. H.
 \newblock Demand side secular stagnation.
 \newblock \emph{American Economic Review: Papers \& Proceedings},
 105(5):60--65, 2015.
+
+\bibitem[Zivot and Andrews(1992)]{zivotandrews1992}
+Zivot, E. and Andrews, D. W. K.
+\newblock Further evidence on the Great Crash, the oil-price shock, and the
+unit-root hypothesis.
+\newblock \emph{Journal of Business \& Economic Statistics}, 10(3):251--270, 1992.
 
 \bibitem[Maddison Project Database(2023)]{maddison2023}
 Maddison Project Database.

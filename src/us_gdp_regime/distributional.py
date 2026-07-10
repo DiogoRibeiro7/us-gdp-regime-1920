@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping, Sequence
 
 import numpy as np
@@ -160,9 +161,9 @@ def build_quintile_tax_rate_panel(panel: pd.DataFrame) -> pd.DataFrame:
             "federal_income_tax_rate_q3",
             "federal_income_tax_rate_q4",
         ]
-        work["q5_minus_bottom80_federal_income_tax_rate"] = (
-            work["federal_income_tax_rate_q5"] - work[lower_middle_columns].mean(axis=1)
-        )
+        work["q5_minus_bottom80_federal_income_tax_rate"] = work[
+            "federal_income_tax_rate_q5"
+        ] - work[lower_middle_columns].mean(axis=1)
     return work.reset_index(drop=True)
 
 
@@ -225,6 +226,13 @@ def fit_distributional_growth_associations(
             result = sm.OLS(y, x).fit(cov_type="HAC", cov_kwds={"maxlags": 1})
             coefficient = float(result.params[lagged])
             std_error = float(result.bse[lagged])
+            with warnings.catch_warnings():
+                # A degenerate (zero-variance) outcome gives a 0/0 R-squared;
+                # report it as missing rather than emitting a divide-by-zero warning.
+                warnings.simplefilter("ignore", RuntimeWarning)
+                r_squared = float(result.rsquared)
+            if not np.isfinite(r_squared):
+                r_squared = float("nan")
             rows.append(
                 {
                     "outcome": outcome,
@@ -236,7 +244,7 @@ def fit_distributional_growth_associations(
                     "conf_low": coefficient - 1.96 * std_error,
                     "conf_high": coefficient + 1.96 * std_error,
                     "n_observations": int(result.nobs),
-                    "r_squared": float(result.rsquared),
+                    "r_squared": r_squared,
                     "model_note": "Single-predictor lagged association; not causal identification.",
                 }
             )

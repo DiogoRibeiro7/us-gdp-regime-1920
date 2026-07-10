@@ -18,3 +18,9 @@ article_assets/*
 
 # Working notes and drafts; not part of the published artifact.
 docs/
+
+# Coverage
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml

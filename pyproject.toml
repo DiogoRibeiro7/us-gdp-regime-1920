@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 authors = [{ name = "Diogo Ribeiro" }]
 dependencies = [
+    "arch>=6.3",
     "matplotlib>=3.8",
     "numpy>=1.26",
     "openpyxl>=3.1",
@@ -24,6 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
+    "pytest-cov>=5.0",
     "ruff>=0.5",
     "mypy>=1.10",
 ]
@@ -37,6 +39,9 @@ us-gdp-regimes = "us_gdp_regime.cli:app"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+us_gdp_regime = ["py.typed"]
 
 [tool.ruff]
 line-length = 100

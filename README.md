@@ -1,5 +1,7 @@
 # United States GDP Regime Analysis, 1920 onward
 
+[![CI](https://github.com/DiogoRibeiro7/us-gdp-regime-1920/actions/workflows/ci.yml/badge.svg)](https://github.com/DiogoRibeiro7/us-gdp-regime-1920/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue.svg)](pyproject.toml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21302054.svg)](https://doi.org/10.5281/zenodo.21302054)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
 

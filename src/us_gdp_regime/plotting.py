@@ -606,8 +606,7 @@ def plot_tax_event_growth_windows(
         "base_broadening": PALETTE["orange"],
     }
     colors = [
-        direction_colors.get(str(direction), PALETTE["muted"])
-        for direction in work["direction"]
+        direction_colors.get(str(direction), PALETTE["muted"]) for direction in work["direction"]
     ]
 
     fig_height = max(7.2, 0.45 * len(work) + 2.2)

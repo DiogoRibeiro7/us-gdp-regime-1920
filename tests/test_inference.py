@@ -6,6 +6,7 @@ import pytest
 
 from us_gdp_regime.inference import (
     bootstrap_break_dates,
+    break_aware_unit_root_tests,
     sequential_break_tests,
     unit_root_diagnostics,
 )
@@ -34,6 +35,30 @@ def test_unit_root_diagnostics_separate_level_from_growth() -> None:
     for column in ["adf_stat", "adf_pvalue", "kpss_stat", "kpss_pvalue"]:
         assert out[column].notna().all()
     assert out.loc[out["series"].eq("gdp_growth"), "adf_pvalue"].iloc[0] <= 1.0
+
+
+def test_break_aware_unit_root_tests_report_dfgls_and_zivot_andrews() -> None:
+    rng = np.random.default_rng(5)
+    years = np.arange(1920, 2020)
+    # A trend-stationary level with a break: DF-GLS and Zivot-Andrews should run
+    # and return finite statistics and p-values.
+    trend = 0.03 * np.arange(len(years))
+    shift = np.where(years >= 1975, 0.5, 0.0)
+    log_gdp = np.log(100.0) + trend + shift + rng.normal(0.0, 0.05, len(years))
+    df = pd.DataFrame({"year": years, "log_real_gdp": log_gdp})
+
+    out = break_aware_unit_root_tests(df)
+
+    assert set(out["test"]) == {"DF-GLS", "Zivot-Andrews"}
+    assert out["statistic"].notna().all()
+    assert ((out["pvalue"] >= 0.0) & (out["pvalue"] <= 1.0)).all()
+    za_year = out.loc[out["test"].eq("Zivot-Andrews"), "break_year"].iloc[0]
+    assert years[0] <= int(za_year) <= years[-1]
+
+
+def test_break_aware_unit_root_tests_handle_short_series() -> None:
+    df = pd.DataFrame({"year": [2000, 2001, 2002], "log_real_gdp": [1.0, 1.1, 1.2]})
+    assert break_aware_unit_root_tests(df).empty
 
 
 def test_sequential_break_tests_flag_true_break() -> None:
