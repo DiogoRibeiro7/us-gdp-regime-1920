@@ -51,6 +51,8 @@ target-version = "py311"
 select = ["E", "F", "I", "B", "UP", "N", "ANN"]
 
 [tool.mypy]
-python_version = "3.11"
+# No fixed python_version: mypy targets the running interpreter so it can parse
+# third-party stubs (e.g. numpy) that use 3.12+ PEP 695 `type` statements. The
+# minimum supported runtime is still 3.11 (requires-python), exercised by CI.
 strict = true
 ignore_missing_imports = true
