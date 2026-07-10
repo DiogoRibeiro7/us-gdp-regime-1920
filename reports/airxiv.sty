@@ -1,0 +1,67 @@
+% Lightweight arXiv-style preprint package for this repository.
+% The name follows the user's requested "airxiv" style while keeping the
+% document compatible with ordinary article.cls builds.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{airxiv}[2026/07/10 Lightweight arXiv-style report format]
+
+\RequirePackage[margin=1in]{geometry}
+\RequirePackage{ifthen}
+\RequirePackage{fancyhdr}
+\RequirePackage{titlesec}
+\RequirePackage{abstract}
+\RequirePackage{xcolor}
+\RequirePackage{hyperref}
+\RequirePackage[numbers]{natbib}
+\RequirePackage{booktabs}
+\RequirePackage{caption}
+\RequirePackage{graphicx}
+\RequirePackage{microtype}
+
+\definecolor{airxivblue}{HTML}{2457A6}
+\definecolor{airxivgray}{HTML}{5D6D7E}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=airxivblue,
+  citecolor=airxivblue,
+  urlcolor=airxivblue,
+  pdftitle={United States GDP Regimes, Fiscal Structure, and Distributional Growth},
+  pdfauthor={Diogo Ribeiro}
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small United States GDP Regimes and Distributional Growth}
+\rhead{\small \thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\titleformat{\section}
+  {\Large\bfseries\color{airxivblue}}
+  {\thesection}{0.75em}{}
+\titleformat{\subsection}
+  {\large\bfseries}
+  {\thesubsection}{0.75em}{}
+\titleformat{\subsubsection}
+  {\normalsize\bfseries}
+  {\thesubsubsection}{0.75em}{}
+
+\renewcommand{\abstractnamefont}{\normalfont\Large\bfseries\color{airxivblue}}
+\renewcommand{\abstracttextfont}{\normalfont\normalsize}
+\setlength{\absleftindent}{0.6in}
+\setlength{\absrightindent}{0.6in}
+
+\captionsetup{
+  font=small,
+  labelfont=bf,
+  labelsep=period
+}
+
+\newcommand{\keywords}[1]{%
+  \vspace{0.6em}
+  \noindent\textbf{Keywords:} #1
+}
+
+\newcommand{\reportnote}[1]{%
+  \vspace{0.5em}
+  \noindent\textcolor{airxivgray}{\small #1}
+}

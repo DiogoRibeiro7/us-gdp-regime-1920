@@ -1,0 +1,426 @@
+\documentclass[11pt]{article}
+\usepackage{airxiv}
+\usepackage{amsmath}
+\usepackage{array}
+\usepackage{float}
+\usepackage{enumitem}
+
+\graphicspath{{../figures/}}
+
+\title{
+  United States GDP Regimes, Fiscal Structure, and Distributional Growth\\
+  \large A Reproducible Data-Science Report, 1920--Present
+}
+
+\author{
+  Diogo Ribeiro\\
+  \texttt{us-gdp-regime-1920}
+}
+
+\date{July 10, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This report summarizes a reproducible empirical workflow for long-run United
+States real GDP growth from 1920 onward. The analysis combines a Maddison-based
+real GDP proxy, FRED/BEA validation data, piecewise growth-regime detection,
+federal fiscal context, tax-regime event dynamics, and distributional measures
+linking GDP per capita to real worker earnings. The headline statistical result
+is that a single long-run trend fits the log GDP level well, but annual growth is
+better read as a sequence of regimes. The distributional result is equally
+important: aggregate real GDP per capita rose much faster than real median
+weekly earnings after the late 1970s, so GDP growth alone is an incomplete proxy
+for broad buying power. Fiscal and tax variables add useful context, but the
+report distinguishes descriptive timing, lagged association, and causal
+identification throughout.
+\end{abstract}
+
+\keywords{United States GDP, growth regimes, public debt, tax policy, real wages,
+distributional analysis, local projections, reproducible research}
+
+\reportnote{All generated tables and figures are reproducible from the Python
+pipeline in this repository. Raw downloaded data are intentionally excluded from
+version control.}
+
+\section{Executive Summary}
+
+The project began with a simple question: whether the United States grew at one
+roughly constant speed after 1920, or whether the data support distinct growth
+regimes. The answer is mixed in the way macroeconomic time series usually are:
+the log level of real GDP has a strong long-run trend, but the annual growth
+process is segmented by depression, war, demobilisation, and a long postwar
+period.
+
+The fitted log-trend model implies an annualized trend growth rate of
+approximately $3.16\%$ and an $R^2$ of $0.987$. The piecewise growth model
+selects five broad regimes in the Maddison-derived annual GDP series: 1921--1928,
+1929--1933, 1934--1944, 1945--1949, and 1950--2022. These regimes are
+descriptive statistical summaries; they are not automatic causal explanations.
+
+The expanded fiscal and distributional layers change the interpretation. Federal
+debt, deficits, and tax laws help structure the historical narrative, but they
+are endogenous to the same shocks that affect GDP. More importantly, GDP per
+capita and real worker earnings diverged strongly after 1979. Indexed to 1979,
+real GDP per capita was about $208.6$ in 2023, while real median weekly earnings
+were about $110.4$. In other words, aggregate output per person more than
+doubled, while the median weekly earnings index increased by only about
+$10.4\%$ over the same base.
+
+\section{Data and Reproducibility}
+
+\subsection{Core GDP Series}
+
+The primary GDP series is built from the Maddison Project Database 2023 by
+multiplying United States real GDP per capita by population. This produces a
+long-run real GDP proxy suitable for growth-rate and log-trend analysis from
+1920 onward. The modern validation source is FRED/BEA annual real GDP
+(\texttt{GDPCA}), available from 1929 onward.
+
+The source-validation table compares Maddison-derived growth with FRED/BEA
+growth from 1930 to 2022. The overlap has 93 annual observations, a growth-rate
+correlation of $0.955$, a mean absolute difference of $0.626$ percentage points,
+and an RMSE of $1.471$ percentage points. This is close enough for regime-level
+analysis, while still reminding the reader that Maddison historical estimates
+and BEA national accounts are not the same object.
+
+\subsection{Fiscal, Tax, and Distributional Data}
+
+The fiscal context layer uses FRED/OMB federal debt, receipts, outlays, deficit,
+and interest-outlay ratios as percent of GDP. The tax-regime event layer uses a
+curated catalog of broad federal tax-law changes, with signed ordinal shock
+values and narrative classifications. The distributional layer adds BEA real GDP
+per capita, BLS real median weekly earnings, BLS real hourly compensation, BEA
+federal receipt composition, IRS top and bottom statutory income-tax rates, and
+BLS Consumer Expenditure federal income-tax rates by income quintile.
+
+These series answer different questions. GDP per capita measures aggregate real
+output per person. Median weekly earnings measure the real earnings of the
+median full-time wage and salary worker. Federal income-tax rates by Consumer
+Expenditure income quintile measure average federal income-tax burdens for
+consumer units, not the full incidence of the tax-and-transfer system.
+
+\section{Methods}
+
+\subsection{Trend Model}
+
+The long-run trend is estimated on log real GDP:
+
+\begin{equation}
+  \log(GDP_t) = \alpha + \beta \cdot year_t + \epsilon_t.
+\end{equation}
+
+The annualized trend growth rate is computed as $\exp(\beta)-1$. This captures
+average exponential growth, but it intentionally does not model nonlinear
+business-cycle dynamics.
+
+\subsection{Piecewise Growth Regimes}
+
+Growth regimes are estimated on annual percent changes:
+
+\begin{equation}
+  growth_t = \mu_j + u_t,\quad t \in \text{regime } j.
+\end{equation}
+
+The algorithm searches over candidate breakpoints with dynamic programming and
+selects the segmentation with a BIC-style penalty. A segment is labelled
+``above mean'' if its mean growth rate exceeds the full-sample mean. This is a
+descriptive label, not a welfare or causality statement.
+
+\subsection{Dynamic Tax Effects}
+
+The dynamic tax-effects layer uses two complementary designs. First, local
+projections estimate the association between a signed tax shock and future GDP
+growth at each horizon:
+
+\begin{equation}
+  growth_{t+h} = \alpha_h + \beta_h shock_t +
+  \gamma_h growth_{t-1} + \gamma'_h growth_{t-2} + e_{t+h}.
+\end{equation}
+
+Second, distributed-lag regressions include current and lagged tax shocks in a
+single annual growth equation. Both designs estimate delayed dynamics, but they
+do not solve identification by themselves. The report therefore separates all
+catalogued tax events from a smaller subset classified as plausibly exogenous
+long-run reforms.
+
+\subsection{Distributional Analysis}
+
+The distributional layer indexes real GDP per capita, real median weekly
+earnings, and real hourly compensation to a common base year:
+
+\begin{equation}
+  index_{x,t} = 100 \times \frac{x_t}{x_{base}}.
+\end{equation}
+
+The main gap measure is:
+
+\begin{equation}
+  gap_t = index_{GDPpc,t} - index_{median earnings,t}.
+\end{equation}
+
+Tax-burden shift is approximated with three sets of proxies: receipt
+composition, statutory top-bottom income-tax rate spread, and Consumer
+Expenditure federal income-tax rates by income quintile. These proxies do not
+constitute a full incidence model, but they directly address whether the tax
+structure moved away from more progressive bases and whether this aligns with
+GDP growth or worker earnings.
+
+\section{Results}
+
+\subsection{Long-Run GDP Trend and Growth Regimes}
+
+Figure~\ref{fig:trend} shows the log real GDP path and fitted linear trend.
+The model fit is high, but the residuals and annual growth series show why the
+trend alone is not an adequate historical summary.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{log_real_gdp_trend.png}
+  \caption{Log real GDP trend from the Maddison-derived United States real GDP
+  proxy. The fitted trend summarizes average exponential growth, while deviations
+  identify periods that require historical interpretation.}
+  \label{fig:trend}
+\end{figure}
+
+Table~\ref{tab:regimes} summarizes the fitted growth regimes. The severe
+1929--1933 contraction and the 1934--1944 rebound/mobilisation period dominate
+the early sample. The post-1950 period is long and relatively stable by this
+model's penalty criterion, with mean annual growth of approximately $3.11\%$.
+
+\begin{table}[H]
+  \centering
+  \caption{Fitted annual GDP growth regimes}
+  \label{tab:regimes}
+  \begin{tabular}{rrrrl}
+    \toprule
+    Start & End & Years & Mean growth & Label \\
+    \midrule
+    1921 & 1928 & 8  &  3.19\% & Above mean \\
+    1929 & 1933 & 5  & -5.78\% & Below mean \\
+    1934 & 1944 & 11 &  8.10\% & Above mean \\
+    1945 & 1949 & 5  & -1.98\% & Below mean \\
+    1950 & 2022 & 73 &  3.11\% & Above mean \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{gdp_growth_regimes.png}
+  \caption{Piecewise annual real GDP growth regimes. Bands are statistical
+  segments, not claims that one historical event caused the entire segment.}
+  \label{fig:regimes}
+\end{figure}
+
+\subsection{Fiscal Context}
+
+Adding federal fiscal ratios changes the narrative from a pure growth story to a
+macro-fiscal story. Debt and deficit measures vary sharply across wars,
+recessions, and crisis periods. Same-year correlations between fiscal ratios and
+GDP growth are modest. In the generated panel, gross debt-to-GDP has a
+same-year correlation with GDP growth of about $-0.317$ and a one-year-lag
+correlation of about $-0.261$. Receipts, outlays, and deficits have smaller
+simple correlations with annual growth.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{fiscal_context.png}
+  \caption{Federal debt, budget ratios, and annual GDP growth. The figure is a
+  timing and context device; it does not identify fiscal causality.}
+  \label{fig:fiscal}
+\end{figure}
+
+\subsection{Tax-Regime Dynamics}
+
+The local-projection estimates in Figure~\ref{fig:taxlp} show delayed paths
+after signed tax-regime shocks. Confidence intervals are wide, especially for
+the plausibly exogenous subset, because there are few major long-run reform
+events in the historical sample. The result should therefore be read as a
+dynamic screening exercise rather than a definitive tax multiplier estimate.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{tax_local_projections.png}
+  \caption{Local-projection estimates of GDP-growth associations after signed
+  tax-regime shocks. The green line restricts the treatment series to events
+  classified as plausibly exogenous long-run reforms.}
+  \label{fig:taxlp}
+\end{figure}
+
+The most important methodological improvement over a same-year event study is
+that the model allows effects to appear with delay. The data do not support a
+simple one-year story. Some horizons are negative, some positive, and most
+intervals overlap zero. That pattern is consistent with the fact that tax laws
+include anticipation, phase-ins, temporary provisions, and heterogeneous
+channels across households and firms.
+
+\section{Tax Burden Shift and Real Wages}
+
+\subsection{GDP Per Capita versus Worker Buying Power}
+
+Figure~\ref{fig:wagegap} is central to the distributional interpretation. Using
+1979 as the common index base, real GDP per capita reached about $208.6$ by
+2023, while real median weekly earnings reached about $110.4$. Real hourly
+compensation rose more than median weekly earnings, but still much less than
+GDP per capita. This means aggregate output per person can increase while the
+median worker's measured real earnings grow slowly.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{wage_gdp_gap.png}
+  \caption{Real GDP per capita, real median weekly earnings, and real hourly
+  compensation indexed to 1979. The widening gap shows why GDP growth is not
+  equivalent to broad worker buying-power growth.}
+  \label{fig:wagegap}
+\end{figure}
+
+This does not mean most people necessarily became poorer in every year. It means
+the aggregate growth measure and the median wage-worker measure diverged
+substantially. A welfare analysis would also need hours worked, household
+composition, transfers, taxes, fringe benefits, asset income, housing costs, and
+consumption prices by income group.
+
+\subsection{Tax Burden Shift Proxies}
+
+Figure~\ref{fig:taxburden} combines three views of tax burden. The first panel
+shows the composition of selected federal receipts. Social-insurance
+contributions rose from about $15.1\%$ of the selected federal receipt base in
+1947 to about $35.4\%$ in 2023. Corporate income taxes fell from about $29.6\%$
+to about $8.4\%$ over the same endpoint comparison. This is consistent with a
+long-run movement away from corporate income taxes and toward social-insurance
+financing.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\linewidth]{tax_burden_shift.png}
+  \caption{Tax burden shift proxies. Receipt composition captures the rise of
+  social-insurance contributions relative to corporate income taxes; quintile
+  rates show average federal income-tax rates by income group where Consumer
+  Expenditure data are available.}
+  \label{fig:taxburden}
+\end{figure}
+
+The Consumer Expenditure quintile panel begins in 1984. In that year, the
+highest income quintile's federal income-tax rate exceeded the average of the
+bottom four quintiles by about $5.25$ percentage points. By 2023, that spread
+was about $14.10$ percentage points. This particular income-tax measure therefore
+does not show a simple shift of federal income-tax burden away from the top
+quintile. The broader burden story is more nuanced: payroll-style financing
+became more important, corporate income-tax receipts became less important, and
+income-tax progressivity by quintile remained substantial.
+
+\subsection{Association Screen}
+
+The lagged association screen regresses GDP growth, real median weekly earnings
+growth, and the GDP/wage gap on one-year-lagged burden-shift proxies. These are
+single-predictor models with HAC standard errors. The strongest pattern in the
+current output is not a robust GDP-growth claim; it is that the GDP/wage gap is
+statistically associated with some tax progressivity proxies. For example, the
+one-year-lag statutory top-bottom rate spread has a negative coefficient in the
+GDP/wage-gap regression, while the quintile rate spread has a positive
+coefficient. These associations should be interpreted cautiously because the
+models are low-dimensional and do not control for technology, unionization,
+trade exposure, monetary policy, inflation, demographic composition, or
+sectoral change.
+
+\section{Limitations}
+
+The main limitation is identification. Breakpoints, fiscal ratios, tax laws, and
+wages all move with macroeconomic conditions. Recessions change tax receipts and
+policy decisions; wars change debt, output, and tax rates; inflation and
+monetary policy affect both GDP and real earnings. The tax-shock catalog partly
+addresses this by separating plausibly exogenous reforms from deficit,
+wartime, and countercyclical changes, but the classification remains historical
+and sample sizes are small.
+
+The second limitation is measurement. Maddison is useful for long-run history
+but is not identical to BEA national accounts. Median weekly earnings are not
+the same as household income or total compensation. Consumer Expenditure
+quintile tax rates cover federal income-tax amounts, not the full tax-and-
+transfer system. Receipt composition is a proxy for burden shifting, not a
+complete incidence analysis.
+
+The third limitation is temporal coverage. Some modern FRED series include
+annualized or partial latest-year observations, while Consumer Expenditure
+quintile data currently end earlier. The report therefore reports explicit
+coverage by series and avoids implying that every dataset covers the same
+complete historical window.
+
+\section{Conclusion}
+
+The GDP regime analysis shows that the United States did not grow at one
+constant annual speed after 1920. A log trend summarizes the long-run level
+well, but annual growth is better read through regimes. Fiscal and tax data
+enrich the narrative, especially by showing how debt, deficits, tax-law changes,
+and federal receipt composition line up with macroeconomic periods.
+
+The distributional extension changes the substantive interpretation. Real GDP
+per capita and real median weekly earnings diverged strongly after 1979. That
+does not negate GDP growth; it clarifies who may have participated in it. From a
+data-science perspective, the correct conclusion is not that GDP is useless, but
+that GDP is incomplete. A credible assessment of economic regimes should report
+aggregate output, fiscal structure, tax burden proxies, and worker purchasing
+power together.
+
+\section*{Reproducibility Statement}
+
+The report is generated from the repository pipeline:
+\begin{itemize}[leftmargin=1.5em]
+  \item \texttt{us-gdp-regimes run --config config/default.yaml}
+  \item \texttt{us-gdp-regimes make-fiscal-context --config config/default.yaml}
+  \item \texttt{us-gdp-regimes make-tax-effects --config config/default.yaml}
+  \item \texttt{us-gdp-regimes make-distributional-analysis --config config/default.yaml}
+\end{itemize}
+
+The relevant notebooks are \texttt{01} through \texttt{06} in the
+\texttt{notebooks/} directory. Generated raw data, model CSVs, figures, and
+article assets are reproducible outputs and are not committed as raw source
+data.
+
+\begin{thebibliography}{9}
+
+\bibitem[Maddison Project Database(2023)]{maddison2023}
+Maddison Project Database.
+\newblock Maddison Project Database 2023.
+\newblock \url{https://www.rug.nl/ggdc/historicaldevelopment/maddison/}.
+
+\bibitem[FRED GDPCA]{fredgdpca}
+Federal Reserve Bank of St. Louis.
+\newblock Real Gross Domestic Product, annual, \texttt{GDPCA}.
+\newblock \url{https://fred.stlouisfed.org/series/GDPCA}.
+
+\bibitem[FRED Fiscal Ratios]{fredfiscal}
+Federal Reserve Bank of St. Louis.
+\newblock Federal fiscal ratio release tables.
+\newblock \url{https://fred.stlouisfed.org/release?rid=263}.
+
+\bibitem[OMB Historical Tables]{ombtables}
+Office of Management and Budget.
+\newblock Historical Tables.
+\newblock \url{https://www.whitehouse.gov/omb/information-resources/budget/historical-tables/}.
+
+\bibitem[IRS SOI Historical Table 23]{irssoi23}
+Internal Revenue Service Statistics of Income.
+\newblock Historical Table 23: U.S. Individual Income Tax.
+\newblock \url{https://www.irs.gov/statistics/soi-tax-stats-historical-table-23}.
+
+\bibitem[BLS Consumer Expenditure Surveys]{blsce}
+U.S. Bureau of Labor Statistics.
+\newblock Consumer Expenditure Surveys.
+\newblock \url{https://www.bls.gov/cex/}.
+
+\bibitem[BEA National Accounts]{bea}
+U.S. Bureau of Economic Analysis.
+\newblock National Income and Product Accounts.
+\newblock \url{https://www.bea.gov/data/gdp/gross-domestic-product}.
+
+\bibitem[arXiv TeX Guidance]{arxivtex}
+arXiv.
+\newblock Submit TeX/LaTeX.
+\newblock \url{https://info.arxiv.org/help/submit_tex.html}.
+
+\end{thebibliography}
+
+\end{document}
