@@ -272,5 +272,4 @@ commercial use, with attribution.
 ## Publishing
 
 Archival on Zenodo (GitHub release → DOI) is documented in
-[docs/publishing_zenodo.md](docs/publishing_zenodo.md). A LinkedIn announcement
-draft is in [docs/linkedin_post.md](docs/linkedin_post.md).
+[docs/publishing_zenodo.md](docs/publishing_zenodo.md).

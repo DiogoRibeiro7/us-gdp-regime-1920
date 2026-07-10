@@ -15,3 +15,6 @@ figures/*
 article_assets/*
 *.egg-info/
 .DS_Store
+
+# Personal LinkedIn announcement draft; not part of the published artifact.
+docs/linkedin_post.md

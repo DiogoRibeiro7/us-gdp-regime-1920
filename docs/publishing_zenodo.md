@@ -44,7 +44,7 @@ run; everything on the repository side is done.
      the README badge and the LinkedIn post;
    - a **version DOI** specific to `v1.0.0`.
 3. Copy the DOI and finish the loop in the repo:
-   - Replace `RECORD_ID` / `DOI_HERE` in `README.md` and `docs/linkedin_post.md`.
+   - Replace `RECORD_ID` in the `README.md` badge and citation.
    - Commit and push.
 
 ## Notes
