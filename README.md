@@ -1,10 +1,7 @@
 # United States GDP Regime Analysis, 1920 onward
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.RECORD_ID.svg)](https://doi.org/10.5281/zenodo.RECORD_ID)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21302054.svg)](https://doi.org/10.5281/zenodo.21302054)
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC%20BY%204.0-lightgrey.svg)](LICENSE)
-
-> Replace `RECORD_ID` with the Zenodo record id after the first release. See
-> [docs/publishing_zenodo.md](docs/publishing_zenodo.md).
 
 This repository builds a reproducible empirical workflow for analysing long-run United States GDP dynamics from 1920 onward.
 
@@ -261,7 +258,10 @@ cite via the DOI. Example:
 
 > Ribeiro, D. (2026). *Growth Regimes in the United States since 1920: Structural
 > Breaks, Fiscal Structure, and the Productivity-Pay Divergence* (v1.0.0). Zenodo.
-> https://doi.org/10.5281/zenodo.RECORD_ID
+> https://doi.org/10.5281/zenodo.21302055
+
+The concept DOI [10.5281/zenodo.21302054](https://doi.org/10.5281/zenodo.21302054)
+always resolves to the latest version.
 
 ## License
 

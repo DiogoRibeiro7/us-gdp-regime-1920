@@ -1,6 +1,6 @@
 # LinkedIn post — technical / methods-forward
 
-> Draft. Replace `DOI_HERE` and the release URL after the Zenodo deposit, then
+> Draft. Replace `https://doi.org/10.5281/zenodo.21302054` and the release URL after the Zenodo deposit, then
 > paste the body below into LinkedIn. Suggested first comment holds the links so
 > the main post stays clean.
 
@@ -24,7 +24,7 @@ I just released a fully reproducible study of U.S. real GDP growth since 1920. A
 
 Feedback from anyone working on structural breaks, unit-root testing, or long-run growth is very welcome.
 
-📄 Paper + code (DOI): DOI_HERE
+📄 Paper + code (DOI): https://doi.org/10.5281/zenodo.21302054
 💻 GitHub: https://github.com/DiogoRibeiro7/us-gdp-regime-1920
 
 #Econometrics #Economics #TimeSeries #DataScience #ReproducibleResearch #Macroeconomics #StructuralBreaks #OpenScience
@@ -33,7 +33,7 @@ Feedback from anyone working on structural breaks, unit-root testing, or long-ru
 
 ## Suggested first comment (put the links here to keep the post clean)
 
-Full write-up (paper + reproducible pipeline) archived on Zenodo: DOI_HERE
+Full write-up (paper + reproducible pipeline) archived on Zenodo: https://doi.org/10.5281/zenodo.21302054
 Code: https://github.com/DiogoRibeiro7/us-gdp-regime-1920
 Methods: unit-root diagnostics (ADF/KPSS), DP segmentation with recursive refinement, bootstrap supF break tests, Jordà local projections, all with HAC inference.
 
@@ -41,4 +41,4 @@ Methods: unit-root diagnostics (ADF/KPSS), DP segmentation with recursive refine
 
 The tidy trend line through a century of U.S. log GDP is a statistical trap: the level is indistinguishable from a unit root, so growth is the right object. Modelling growth as regimes — and fixing a variance-pooling flaw that hides the post-2000 slowdown behind the 1929–45 chaos — resolves U.S. history into 6 statistically supported eras, ending in a distinct post-2000 slowdown. Fully reproducible; every number is generated from the outputs.
 
-📄 DOI_HERE · 💻 https://github.com/DiogoRibeiro7/us-gdp-regime-1920
+📄 https://doi.org/10.5281/zenodo.21302054 · 💻 https://github.com/DiogoRibeiro7/us-gdp-regime-1920
