@@ -50,6 +50,26 @@ one.
 
 BIC penalises extra segments more strongly than AIC. That is appropriate here because the article should not overfit every recession or temporary rebound. The goal is to identify broad growth regimes, not every business-cycle fluctuation.
 
+## Recursive refinement
+
+A single global segmentation assumes one residual variance for the whole sample.
+That assumption fails for United States growth: the 1929-1945 swings inflate the
+pooled variance so much that calmer postwar mean shifts are never selected, and
+the global fit leaves 1950 onward as one long block. The pipeline therefore
+applies a recursive refinement (`fit_recursive_growth_regimes`, enabled by
+`model.recursive_refinement`): after the global fit, each segment is re-segmented
+on its own observations and its own residual variance, and split when the
+criterion supports it. Recursion is bounded by `model.max_recursion_depth`.
+
+On the current data this splits the postwar era at 2000 into a high-growth
+1950-2000 regime and a slower 2001-2022 regime (the post-2000 slowdown). The
+split is corroborated three ways --- postwar subsample under BIC, postwar
+subsample under AIC, and the full sample under AIC all agree --- and the single
+postwar break is significant on the postwar subsample's own scale
+(`postwar_break_tests.csv`), while no further postwar break is. The plain global
+segmentation is retained as `regime_segments_global.csv` for reference, and the
+decomposition is written to `postwar_decomposition.csv`.
+
 ## Are the breaks statistically supported?
 
 The number of regimes is not taken on faith from the information criterion. Two

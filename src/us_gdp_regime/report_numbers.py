@@ -97,6 +97,9 @@ def _add_regimes(models_dir: Path, numbers: dict[str, str], tables: dict[str, st
     if df is None or df.empty:
         return
     numbers["num_regimes"] = str(len(df))
+    global_df = _read(models_dir, "regime_segments_global")
+    if global_df is not None and not global_df.empty:
+        numbers["num_global_regimes"] = str(len(global_df))
     last = df.iloc[-1]
     numbers["postwar_start"] = str(int(last["start_year"]))
     numbers["postwar_end"] = str(int(last["end_year"]))
@@ -161,6 +164,51 @@ def _add_break_cis(models_dir: Path, numbers: dict[str, str], tables: dict[str, 
     numbers["widest_break_year"] = str(int(widest["point_break_year"]))
     numbers["widest_break_ci_low"] = str(int(widest["ci_low_year"]))
     numbers["widest_break_ci_high"] = str(int(widest["ci_high_year"]))
+
+
+def _add_postwar(models_dir: Path, numbers: dict[str, str], tables: dict[str, str]) -> None:
+    df = _read(models_dir, "postwar_decomposition")
+    if df is None or df.empty:
+        return
+    postwar_start = int(df.loc[df["sample"].eq("postwar"), "start_year"].min())
+
+    bic = df.loc[df["sample"].eq("postwar") & df["criterion"].eq("bic")]
+    if not bic.empty:
+        early, late = bic.iloc[0], bic.iloc[-1]
+        numbers["postwar_early_start"] = str(int(early["start_year"]))
+        numbers["postwar_early_end"] = str(int(early["end_year"]))
+        numbers["postwar_early_mean"] = _fmt(early["mean_growth"], 2)
+        numbers["postwar_late_start"] = str(int(late["start_year"]))
+        numbers["postwar_late_end"] = str(int(late["end_year"]))
+        numbers["postwar_late_mean"] = _fmt(late["mean_growth"], 2)
+        numbers["postwar_split_year"] = str(int(late["start_year"]))
+
+    method_labels = [
+        ("postwar", "bic", "Postwar subsample, BIC"),
+        ("postwar", "aic", "Postwar subsample, AIC"),
+        ("full", "aic", "Full sample, AIC"),
+    ]
+    rows = []
+    for sample, criterion, label in method_labels:
+        group = df.loc[df["sample"].eq(sample) & df["criterion"].eq(criterion)]
+        group = group.loc[group["start_year"] >= postwar_start]
+        if group.empty:
+            continue
+        early, late = group.iloc[0], group.iloc[-1]
+        rows.append(
+            f"    {label} & {int(early['start_year'])}--{int(early['end_year'])} & "
+            f"{_fmt(early['mean_growth'], 2)}\\% & "
+            f"{int(late['start_year'])}--{int(late['end_year'])} & "
+            f"{_fmt(late['mean_growth'], 2)}\\% \\\\"
+        )
+    if rows:
+        tables["postwar_table"] = _latex_table_body(rows)
+
+    tests = _read(models_dir, "postwar_break_tests")
+    if tests is not None and not tests.empty:
+        first = tests.loc[tests["segments_null"].eq(1)]
+        if not first.empty:
+            numbers["postwar_break_p"] = _fmt_p_math(first.iloc[0]["bootstrap_p_value"])
 
 
 def _add_source_validation(models_dir: Path, numbers: dict[str, str]) -> None:
@@ -253,6 +301,7 @@ def build_report_numbers(models_dir: Path) -> tuple[dict[str, str], dict[str, st
     _add_unit_root(models_dir, numbers)
     _add_break_tests(models_dir, numbers, tables)
     _add_break_cis(models_dir, numbers, tables)
+    _add_postwar(models_dir, numbers, tables)
     _add_source_validation(models_dir, numbers)
     _add_fiscal(models_dir, numbers)
     _add_distributional(models_dir, numbers)

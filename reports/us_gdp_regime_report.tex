@@ -72,10 +72,11 @@ Dickey-Fuller and KPSS tests both indicate that log real GDP is consistent with
 a unit root, so a straight-line trend mechanically fits a persistent series
 well. Annual growth, by contrast, is stationary. The piecewise growth model
 selects $\NumRegimes$ broad regimes in the Maddison-derived annual GDP series
-(Table~\ref{tab:regimes}), and a sequential parametric-bootstrap break test
-agrees that additional regimes beyond this point are not statistically
-supported. These regimes are descriptive statistical summaries; they are not
-automatic causal explanations.
+(Table~\ref{tab:regimes}). A single-variance global fit finds only
+$\NumGlobalRegimes$, lumping the entire postwar era together, but recursive
+refinement --- corroborated by three independent criteria --- splits it at the
+post-$\PostwarSplitYear$ growth slowdown. These regimes are descriptive
+statistical summaries; they are not automatic causal explanations.
 
 The expanded fiscal and distributional layers change the interpretation. Federal
 debt, deficits, and tax laws help structure the historical narrative, but they
@@ -156,6 +157,15 @@ residual variance as free parameters. A segment is labelled ``above mean'' if
 its mean growth rate exceeds the full-sample mean. This is a descriptive label,
 not a welfare or causality statement.
 
+A single global segmentation assumes one residual variance for the whole sample.
+That is a poor assumption here: the extreme 1929--1945 swings inflate the pooled
+variance so much that calmer post-war mean shifts look small by comparison and
+are never selected. The pipeline therefore applies a \emph{recursive refinement}:
+after the global fit, each segment is re-segmented on its own observations, using
+its own residual variance, so a long regime is split when its internal structure
+warrants it. This is the headline model; the plain global fit is retained as a
+reference.
+
 The number of regimes is not taken on faith from the criterion. Each additional
 break is tested with a sequential $\text{supF}(l+1\,|\,l)$ statistic in the
 spirit of Bai and Perron \cite{baiperron1998,baiperron2003}. Because the break
@@ -231,11 +241,16 @@ analysing regimes on growth rather than on the level.
   \label{fig:trend}
 \end{figure}
 
-Table~\ref{tab:regimes} summarizes the fitted growth regimes. The severe
-1929--1933 contraction and the 1934--1944 rebound/mobilisation period dominate
-the early sample. The post-$\PostwarStart$ period is long and relatively stable
-by this model's penalty criterion, with mean annual growth of approximately
-$\PostwarMeanGrowth\%$ against a full-sample mean of $\LongRunMeanGrowth\%$.
+Table~\ref{tab:regimes} summarizes the $\NumRegimes$ fitted growth regimes. The
+severe 1929--1933 contraction and the 1934--1944 rebound/mobilisation period
+dominate the early sample. The recursive refinement then splits the postwar era
+that a plain global fit ($\NumGlobalRegimes$ regimes) leaves as one block: a
+high-growth $\PostwarEarlyStart$--$\PostwarEarlyEnd$ regime averaging
+$\PostwarEarlyMean\%$ and a slower $\PostwarLateStart$--$\PostwarLateEnd$ regime
+averaging $\PostwarLateMean\%$, both compared against a full-sample mean of
+$\LongRunMeanGrowth\%$. The post-$\PostwarSplitYear$ slowdown is the single most
+important postwar break, and the next subsection shows it is statistically
+supported.
 
 \begin{table}[H]
   \centering
@@ -259,12 +274,15 @@ $\PostwarMeanGrowth\%$ against a full-sample mean of $\LongRunMeanGrowth\%$.
 
 \subsection{Are the Breaks Statistically Significant?}
 
-Table~\ref{tab:breaktests} reports the sequential break tests. Reading down the
-table, each additional regime up to the selected model earns a small
-bootstrap p-value, while the first insignificant step marks the point where the
-data stop supporting further segmentation. This is the formal counterpart of the
-information-criterion choice: the criterion and the test agree on the number of
-regimes.
+Table~\ref{tab:breaktests} reports the sequential break tests for the
+\emph{global} model. Reading down the table, additional regimes earn small
+bootstrap p-values up to $\NumGlobalRegimes$ segments, after which the steps are
+insignificant. This is the formal counterpart of the global
+information-criterion choice, and it explains why a single-variance model stops
+before splitting the postwar era: relative to the enormous 1929--1945 residual
+variance, the postwar mean shift is not large enough to clear the global bar.
+That is a limitation of the pooled-variance assumption, not evidence that the
+postwar era is homogeneous, as the decomposition below shows.
 
 \begin{table}[H]
   \centering
@@ -280,12 +298,12 @@ regimes.
 \end{table}
 
 The break \emph{dates} are not equally well identified. Table~\ref{tab:breakcis}
-gives residual-bootstrap confidence intervals for each break year. The Depression
-and mobilisation breaks are sharp, whereas the start of the long postwar regime
-near $\WidestBreakYear$ is estimated very imprecisely, with a percentile interval
-spanning $\WidestBreakCiLow$--$\WidestBreakCiHigh$. The lesson is that a break
-being statistically present does not mean its timing is pinned down to a single
-year.
+gives residual-bootstrap confidence intervals for each break year of the global
+model. The Depression and mobilisation breaks are sharp, whereas the start of the
+long postwar regime near $\WidestBreakYear$ is estimated very imprecisely, with a
+percentile interval spanning $\WidestBreakCiLow$--$\WidestBreakCiHigh$. That very
+imprecision is a symptom: the global model is trying to summarize a heterogeneous
+postwar era with one break and one mean.
 
 \begin{table}[H]
   \centering
@@ -296,6 +314,32 @@ year.
     Break & Point year & 90\% interval & Std.\ (years) \\
     \midrule
     \input{generated_break_ci_table.tex}
+  \end{tabular}
+\end{table}
+
+\subsection{Postwar Decomposition}
+
+Re-segmenting the postwar era on its own variance scale resolves the ambiguity.
+Table~\ref{tab:postwar} shows that three independent choices agree: the postwar
+subsample under BIC, the postwar subsample under AIC, and the full sample under
+AIC all split the postwar era at $\PostwarSplitYear$ into a
+$\PostwarEarlyStart$--$\PostwarEarlyEnd$ regime averaging $\PostwarEarlyMean\%$
+and a $\PostwarLateStart$--$\PostwarLateEnd$ regime averaging
+$\PostwarLateMean\%$. On the postwar subsample the single break at
+$\PostwarSplitYear$ is statistically significant ($p \PostwarBreakP$), while no
+further postwar break is. This is the post-2000 growth slowdown, and it is the
+sixth regime added by the recursive headline model in Table~\ref{tab:regimes}.
+
+\begin{table}[H]
+  \centering
+  \caption{Postwar decomposition: three methods agree on the
+  $\PostwarSplitYear$ split}
+  \label{tab:postwar}
+  \begin{tabular}{lcccc}
+    \toprule
+    Method & Early regime & Mean & Late regime & Mean \\
+    \midrule
+    \input{generated_postwar_table.tex}
   \end{tabular}
 \end{table}
 

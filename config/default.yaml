@@ -30,6 +30,11 @@ model:
   # supF sequential tests are the slower step; break-date CIs are cheaper.
   break_test_bootstrap: 199
   break_date_bootstrap: 499
+  # Recursively re-segment long regimes on their own variance scale so a calm
+  # sub-period (e.g. the post-2000 slowdown) is not masked by the high-variance
+  # 1929-1945 episode. Set false for the plain global segmentation.
+  recursive_refinement: true
+  max_recursion_depth: 3
 
 plots:
   dpi: 220

@@ -11,8 +11,8 @@ The workflow estimates:
 1. A long-run trend regression on log real GDP, with Newey-West (HAC) standard errors.
 2. Unit-root diagnostics (ADF and KPSS) on the level and the growth series.
 3. Annual real GDP growth.
-4. Piecewise constant growth regimes.
-5. Formal structural-break inference: sequential bootstrap supF tests and bootstrap confidence intervals for the break years.
+4. Piecewise constant growth regimes, with recursive within-segment refinement so a long regime (e.g. the postwar era) is split on its own variance scale instead of being masked by the high-variance 1929-1945 episode.
+5. Formal structural-break inference: sequential bootstrap supF tests, bootstrap confidence intervals for the break years, and a postwar decomposition cross-checked under BIC and AIC.
 6. Above-mean and below-mean periods.
 7. Article-ready tables and figures, plus a machine-generated numbers/macros file so the written report never drifts from the outputs.
 8. Optional fiscal context: federal debt, budget ratios, and broad tax-regime event windows.

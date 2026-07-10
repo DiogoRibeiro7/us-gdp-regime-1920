@@ -44,7 +44,7 @@ ones.
 A piecewise model divides annual real GDP growth into segments, each with its own
 mean. Breakpoints are chosen by dynamic programming under a Bayesian information
 criterion that penalises adding segments. On the Maddison-derived series it
-selects five regimes:
+selects six regimes:
 
 | Segment | Start | End | Years | Mean growth (%) | Long-run mean (%) | Regime |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -52,14 +52,34 @@ selects five regimes:
 | 2 | 1929 | 1933 | 5 | -5.78 | 2.97 | below_mean |
 | 3 | 1934 | 1944 | 11 | 8.10 | 2.97 | above_mean |
 | 4 | 1945 | 1949 | 5 | -1.98 | 2.97 | below_mean |
-| 5 | 1950 | 2022 | 73 | 3.11 | 2.97 | above_mean |
+| 5 | 1950 | 2000 | 51 | 3.63 | 2.97 | above_mean |
+| 6 | 2001 | 2022 | 22 | 1.89 | 2.97 | below_mean |
 
 The sequence lines up with the familiar economic history of the century: the
 1920s expansion, the 1929–1933 Depression collapse, the 1934–1944
-rebound-and-mobilisation surge, postwar demobilisation, and a long, comparatively
-stable postwar era. But a breakpoint near a famous event does not prove the event
-caused it. The model finds changes in the growth pattern; explaining them still
-requires historical evidence.
+rebound-and-mobilisation surge, postwar demobilisation, the postwar boom, and the
+post-2000 growth slowdown. But a breakpoint near a famous event does not prove the
+event caused it. The model finds changes in the growth pattern; explaining them
+still requires historical evidence.
+
+### Don't let the World Wars hide the slowdown
+
+That sixth regime deserves a note, because a naïve model misses it. A single
+global segmentation assumes one level of "noise" for the whole century — but the
+1929–1945 swings (−5.8% and +8.1%) are so violent that they set an enormous noise
+bar. Against that bar, the calmer postwar shift from ~3.6% to ~1.9% growth looks
+small, and a global BIC leaves 1950–2022 as one 73-year block. That is a
+statistical artifact, not economic reality.
+
+The fix is to re-segment each long regime on *its own* variance scale. Do that,
+and the postwar era cleanly splits at **2000** into a high-growth 1950–2000 era
+(~3.63%/yr) and the slower 2001–2022 era (~1.89%/yr). This split is robust: it
+appears under BIC on the postwar subsample, under AIC on the postwar subsample,
+and under AIC on the full sample, and the single postwar break at 2000 is
+statistically significant (bootstrap p ≈ 0.045) while no further postwar break
+is. The global model's telltale sign was already there — its 1950 breakpoint had
+a bootstrap confidence interval running all the way to the late 1980s, a red flag
+that one postwar regime was doing too much work.
 
 ## Are the breaks real — and are the dates sharp?
 

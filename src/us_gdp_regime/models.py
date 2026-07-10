@@ -388,6 +388,93 @@ def fit_growth_regimes(
     return segments, segment_frame
 
 
+def _recursive_segment_ends(
+    values: np.ndarray,
+    min_segment_size: int,
+    max_breaks: int,
+    criterion: Criterion,
+    max_depth: int,
+    depth: int = 0,
+    offset: int = 0,
+) -> list[int]:
+    """Recursively segment ``values``, returning global end indices.
+
+    A segment is re-segmented on its own observations, so its break decision uses
+    its own residual variance rather than the full-sample variance. This prevents
+    a high-variance episode (such as 1929-1945) from masking mean shifts inside a
+    long, calmer segment (such as the post-2000 growth slowdown).
+    """
+    n = len(values)
+    if depth >= max_depth or n < 2 * min_segment_size:
+        return [offset + n]
+    breakpoints = select_piecewise_breakpoints(
+        values=values,
+        min_segment_size=min_segment_size,
+        max_breaks=max_breaks,
+        criterion=criterion,
+    )
+    if len(breakpoints) <= 1:
+        return [offset + n]
+
+    ends: list[int] = []
+    start = 0
+    for end in breakpoints:
+        ends.extend(
+            _recursive_segment_ends(
+                values=values[start:end],
+                min_segment_size=min_segment_size,
+                max_breaks=max_breaks,
+                criterion=criterion,
+                max_depth=max_depth,
+                depth=depth + 1,
+                offset=offset + start,
+            )
+        )
+        start = end
+    return ends
+
+
+def fit_recursive_growth_regimes(
+    df: pd.DataFrame,
+    min_segment_size: int = 5,
+    max_breaks: int = 8,
+    criterion: Criterion = "bic",
+    max_depth: int = 3,
+) -> tuple[list[PiecewiseSegment], pd.DataFrame]:
+    """Fit piecewise regimes with recursive within-segment refinement.
+
+    The global fit is computed first; each long segment is then re-tested on its
+    own variance scale and split when the criterion supports it. Segment means
+    and above/below labels are still computed against the full-sample mean, so the
+    output is directly comparable to :func:`fit_growth_regimes`.
+    """
+    if max_depth < 1:
+        raise ValueError("max_depth must be at least 1.")
+    required = {"year", "gdp_growth"}
+    missing = required.difference(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    work = df[["year", "gdp_growth"]].copy()
+    work["gdp_growth"] = pd.to_numeric(work["gdp_growth"], errors="coerce")
+    work = work.dropna(subset=["year", "gdp_growth"]).reset_index(drop=True)
+    values = work["gdp_growth"].to_numpy(dtype=float)
+    breakpoints = sorted(
+        set(
+            _recursive_segment_ends(
+                values=values,
+                min_segment_size=min_segment_size,
+                max_breaks=max_breaks,
+                criterion=criterion,
+                max_depth=max_depth,
+            )
+        )
+    )
+    segments = build_segments(work, breakpoints, growth_column="gdp_growth")
+    segment_frame = pd.DataFrame([segment.__dict__ for segment in segments])
+    return segments, segment_frame
+
+
 def assign_segment_labels(df: pd.DataFrame, segments: list[PiecewiseSegment]) -> pd.DataFrame:
     """Assign fitted segment IDs and regime labels to annual observations."""
     out = df.copy()

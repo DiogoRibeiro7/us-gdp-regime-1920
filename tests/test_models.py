@@ -7,6 +7,7 @@ import pytest
 from us_gdp_regime.models import (
     fit_growth_regimes,
     fit_log_trend,
+    fit_recursive_growth_regimes,
     newey_west_lags,
     segmentation_n_parameters,
     segmentation_ssr_path,
@@ -159,3 +160,41 @@ def test_bic_can_select_fewer_regimes_than_aic_on_noisy_data() -> None:
     )
 
     assert len(bic_breakpoints) <= len(aic_breakpoints)
+
+
+def test_recursive_refinement_recovers_break_masked_by_high_variance_episode() -> None:
+    rng = np.random.default_rng(0)
+    # A violent early episode (like 1929-1945) inflates the pooled variance and
+    # masks a calm, modest mean shift later (like the post-2000 slowdown).
+    early = rng.normal(0.0, 7.0, 15)
+    calm_high = rng.normal(3.6, 0.8, 25)
+    calm_low = rng.normal(1.9, 0.8, 20)
+    values = np.concatenate([early, calm_high, calm_low])
+    years = np.arange(1920, 1920 + len(values))
+    df = pd.DataFrame({"year": years, "gdp_growth": values})
+
+    global_segments, _ = fit_growth_regimes(df, min_segment_size=5, max_breaks=8, criterion="bic")
+    recursive_segments, recursive_frame = fit_recursive_growth_regimes(
+        df, min_segment_size=5, max_breaks=8, criterion="bic", max_depth=3
+    )
+
+    # The global fit merges the calm block; recursion recovers the masked split.
+    assert len(recursive_segments) > len(global_segments)
+    # The two calm regimes (means ~3.6 and ~1.9) are separated in the recursive fit.
+    means = sorted(recursive_frame["mean_growth"])
+    assert max(means) - min(means) > 1.0
+
+
+def test_recursive_refinement_is_stable_and_validates_depth() -> None:
+    years = np.arange(1920, 1980)
+    values = np.concatenate([np.repeat(1.0, 20), np.repeat(5.0, 20), np.repeat(2.0, 20)])
+    df = pd.DataFrame({"year": years, "gdp_growth": values.astype(float)})
+
+    deep, _ = fit_recursive_growth_regimes(df, min_segment_size=5, max_breaks=8, max_depth=5)
+    shallow, _ = fit_recursive_growth_regimes(df, min_segment_size=5, max_breaks=8, max_depth=1)
+    # A clean three-regime signal is found and does not over-fragment with depth.
+    assert len(deep) == 3
+    assert len(shallow) == 3
+
+    with pytest.raises(ValueError, match="max_depth"):
+        fit_recursive_growth_regimes(df, max_depth=0)

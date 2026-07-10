@@ -45,9 +45,11 @@ from us_gdp_regime.inference import (
     unit_root_diagnostics,
 )
 from us_gdp_regime.models import (
+    PiecewiseSegment,
     assign_segment_labels,
     fit_growth_regimes,
     fit_log_trend,
+    fit_recursive_growth_regimes,
     segmentation_ssr_path,
 )
 from us_gdp_regime.plotting import (
@@ -228,12 +230,42 @@ def _load_prepared_series(config: AppConfig) -> pd.DataFrame:
     return validate_gdp_series(pd.read_csv(processed_path))
 
 
+def _fit_regimes(
+    config: AppConfig,
+    work: pd.DataFrame,
+) -> tuple[list[PiecewiseSegment], pd.DataFrame]:
+    """Fit growth regimes using the configured segmentation strategy.
+
+    Uses recursive within-segment refinement when ``model.recursive_refinement``
+    is enabled, otherwise the plain global segmentation.
+    """
+    if config.model.recursive_refinement:
+        return fit_recursive_growth_regimes(
+            work,
+            min_segment_size=config.model.min_segment_size,
+            max_breaks=config.model.max_breaks,
+            criterion=config.model.criterion,
+            max_depth=config.model.max_recursion_depth,
+        )
+    return fit_growth_regimes(
+        work,
+        min_segment_size=config.model.min_segment_size,
+        max_breaks=config.model.max_breaks,
+        criterion=config.model.criterion,
+    )
+
+
 def fit_models(config: AppConfig, series: pd.DataFrame | None = None) -> dict[str, Path]:
     """Fit trend and regime models, formal inference, and save model outputs."""
     _ensure_directories(config)
     work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
     trend_result, _ = fit_log_trend(work)
-    segments, segment_frame = fit_growth_regimes(
+    segments, segment_frame = _fit_regimes(config, work)
+
+    # The global segmentation is kept as the reference for break inference, which
+    # is a statement about a single-variance global model, and for transparency
+    # about what the recursive refinement adds.
+    global_segments, global_frame = fit_growth_regimes(
         work,
         min_segment_size=config.model.min_segment_size,
         max_breaks=config.model.max_breaks,
@@ -242,11 +274,75 @@ def fit_models(config: AppConfig, series: pd.DataFrame | None = None) -> dict[st
 
     trend_path = config.paths.models_dir / "trend_regression.csv"
     segment_path = config.paths.models_dir / "regime_segments.csv"
+    global_path = config.paths.models_dir / "regime_segments_global.csv"
     pd.DataFrame([trend_result.__dict__]).to_csv(trend_path, index=False)
     segment_frame.to_csv(segment_path, index=False)
-    outputs = {"trend": trend_path, "segments": segment_path}
+    global_frame.to_csv(global_path, index=False)
+    outputs = {"trend": trend_path, "segments": segment_path, "segments_global": global_path}
 
-    outputs.update(_write_inference_outputs(config, work, n_selected_breaks=len(segments) - 1))
+    outputs.update(
+        _write_inference_outputs(config, work, n_selected_breaks=len(global_segments) - 1)
+    )
+    outputs.update(_write_postwar_decomposition(config, work, global_segments))
+    return outputs
+
+
+def _write_postwar_decomposition(
+    config: AppConfig,
+    work: pd.DataFrame,
+    global_segments: list[PiecewiseSegment],
+) -> dict[str, Path]:
+    """Decompose the longest global regime on its own scale, three ways.
+
+    The single long postwar regime in the global fit is re-segmented (i) on the
+    postwar subsample under BIC, (ii) on the postwar subsample under AIC, and
+    (iii) it is checked against the full-sample AIC fit. All three should agree on
+    the split, giving a robustness triangulation for the recursive headline. A
+    sequential supF test is also run on the postwar subsample.
+    """
+    models_dir = config.paths.models_dir
+    if not global_segments:
+        return {}
+    postwar_start = max(global_segments, key=lambda segment: segment.n_observations).start_year
+    postwar = work.loc[work["year"] >= postwar_start].reset_index(drop=True)
+
+    frames: list[pd.DataFrame] = []
+    plans = [("postwar", postwar, "bic"), ("postwar", postwar, "aic"), ("full", work, "aic")]
+    for sample_label, frame, criterion in plans:
+        try:
+            _, segment_frame = fit_growth_regimes(
+                frame,
+                min_segment_size=config.model.min_segment_size,
+                max_breaks=config.model.max_breaks,
+                criterion=criterion,  # type: ignore[arg-type]
+            )
+        except ValueError:
+            continue
+        subset = segment_frame[
+            ["start_year", "end_year", "n_observations", "mean_growth", "regime"]
+        ].copy()
+        subset.insert(0, "criterion", criterion)
+        subset.insert(0, "sample", sample_label)
+        frames.append(subset)
+
+    outputs: dict[str, Path] = {}
+    if frames:
+        decomposition = pd.concat(frames, ignore_index=True)
+        decomposition_path = models_dir / "postwar_decomposition.csv"
+        decomposition.to_csv(decomposition_path, index=False)
+        outputs["postwar_decomposition"] = decomposition_path
+
+    postwar_growth = postwar["gdp_growth"].dropna().to_numpy(dtype=float)
+    postwar_tests = sequential_break_tests(
+        postwar_growth,
+        min_segment_size=config.model.min_segment_size,
+        max_breaks=config.model.max_breaks,
+        n_bootstrap=config.model.break_test_bootstrap,
+    )
+    if not postwar_tests.empty:
+        postwar_tests_path = models_dir / "postwar_break_tests.csv"
+        postwar_tests.to_csv(postwar_tests_path, index=False)
+        outputs["postwar_break_tests"] = postwar_tests_path
     return outputs
 
 
@@ -303,12 +399,7 @@ def make_figures(config: AppConfig, series: pd.DataFrame | None = None) -> dict[
     _ensure_directories(config)
     work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
     trend_result, trend_frame = fit_log_trend(work)
-    segments, _ = fit_growth_regimes(
-        work,
-        min_segment_size=config.model.min_segment_size,
-        max_breaks=config.model.max_breaks,
-        criterion=config.model.criterion,
-    )
+    segments, _ = _fit_regimes(config, work)
 
     trend_figure_path = config.paths.figures_dir / "log_real_gdp_trend.png"
     regimes_figure_path = config.paths.figures_dir / "gdp_growth_regimes.png"
@@ -343,12 +434,7 @@ def make_fiscal_context(config: AppConfig, series: pd.DataFrame | None = None) -
     """Build the optional fiscal/debt/tax context analysis."""
     _ensure_directories(config)
     work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
-    segments, _ = fit_growth_regimes(
-        work,
-        min_segment_size=config.model.min_segment_size,
-        max_breaks=config.model.max_breaks,
-        criterion=config.model.criterion,
-    )
+    segments, _ = _fit_regimes(config, work)
     labelled_series = assign_segment_labels(work, segments)
 
     fiscal_frames: dict[str, pd.DataFrame] = {}
@@ -418,12 +504,7 @@ def make_tax_effects(config: AppConfig, series: pd.DataFrame | None = None) -> d
     """Build dynamic tax-regime effect outputs."""
     _ensure_directories(config)
     work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
-    segments, _ = fit_growth_regimes(
-        work,
-        min_segment_size=config.model.min_segment_size,
-        max_breaks=config.model.max_breaks,
-        criterion=config.model.criterion,
-    )
+    segments, _ = _fit_regimes(config, work)
     labelled_series = assign_segment_labels(work, segments)
 
     fiscal_context_path = config.paths.models_dir / "fiscal_context.csv"
@@ -646,12 +727,7 @@ def run_pipeline(config: AppConfig) -> dict[str, Path]:
     figure_outputs = make_figures(config, series=series)
     article_outputs = export_article_assets(config)
 
-    segments, _ = fit_growth_regimes(
-        series,
-        min_segment_size=config.model.min_segment_size,
-        max_breaks=config.model.max_breaks,
-        criterion=config.model.criterion,
-    )
+    segments, _ = _fit_regimes(config, series)
     labelled_series = assign_segment_labels(series, segments)
     processed_path = config.paths.processed_dir / "us_gdp_series.csv"
     labelled_series.to_csv(processed_path, index=False)

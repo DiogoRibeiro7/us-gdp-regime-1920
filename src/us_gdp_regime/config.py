@@ -55,6 +55,8 @@ class ModelConfig:
     compare_with_fred: bool
     break_test_bootstrap: int = 199
     break_date_bootstrap: int = 499
+    recursive_refinement: bool = True
+    max_recursion_depth: int = 3
 
 
 @dataclass(frozen=True)
@@ -156,6 +158,8 @@ def load_config(path: str | Path) -> AppConfig:
             compare_with_fred=bool(model_raw.get("compare_with_fred", True)),
             break_test_bootstrap=int(model_raw.get("break_test_bootstrap", 199)),
             break_date_bootstrap=int(model_raw.get("break_date_bootstrap", 499)),
+            recursive_refinement=bool(model_raw.get("recursive_refinement", True)),
+            max_recursion_depth=int(model_raw.get("max_recursion_depth", 3)),
         ),
         plots=PlotConfig(dpi=int(plots_raw.get("dpi", 160))),
     )
