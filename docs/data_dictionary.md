@@ -20,11 +20,19 @@
 | Column | Meaning |
 |---|---|
 | `intercept` | Intercept from the log real GDP trend regression. |
-| `slope` | Annual slope in log real GDP. |
-| `r_squared` | R-squared of the log trend regression. |
+| `slope` | Annual slope in log real GDP (`beta`). |
+| `r_squared` | R-squared of the log trend regression. High values reflect persistence, not evidence of a deterministic trend. |
 | `annualised_growth_rate` | Approximate annual trend growth rate, computed as `exp(slope) - 1`. |
+| `slope_std_error` | Newey-West (HAC) standard error of the slope. |
+| `slope_t_statistic` | HAC t-statistic of the slope. |
+| `slope_p_value` | HAC p-value of the slope. |
+| `n_observations` | Number of annual observations used. |
+| `hac_lags` | Newey-West truncation lag. |
 
 ## `data/models/regime_segments.csv`
+
+Headline regimes from the recursive-refinement model (see `regime_segments_global.csv`
+for the plain global fit).
 
 | Column | Meaning |
 |---|---|
@@ -36,6 +44,106 @@
 | `long_run_mean` | Full-sample mean annual real GDP growth. |
 | `regime` | `above_mean` or `below_mean`. |
 | `sse` | Within-segment sum of squared errors around the segment mean. |
+
+## `data/models/regime_segments_global.csv`
+
+Plain global segmentation (one pooled residual variance), retained as a
+reference for the recursive headline model. Same columns as
+`regime_segments.csv`.
+
+## `data/models/unit_root_tests.csv`
+
+| Column | Meaning |
+|---|---|
+| `series` | Tested series (`log_real_gdp` or `gdp_growth`). |
+| `description` | Human-readable series description. |
+| `adf_regression` | ADF deterministic terms (`ct` = constant and trend, `c` = constant). |
+| `adf_stat`, `adf_pvalue` | Augmented Dickey-Fuller statistic and p-value (null: unit root). |
+| `adf_used_lag`, `adf_nobs` | Lag order selected by AIC and effective observations. |
+| `adf_rejects_unit_root_5pct` | Whether ADF rejects the unit root at 5%. |
+| `kpss_stat`, `kpss_pvalue` | KPSS statistic and p-value (null: stationarity). |
+| `kpss_used_lag` | KPSS bandwidth. |
+| `kpss_rejects_stationarity_5pct` | Whether KPSS rejects stationarity at 5%. |
+
+## `data/models/segmentation_selection.csv`
+
+Model-selection curve behind the regime count.
+
+| Column | Meaning |
+|---|---|
+| `n_segments`, `n_breaks` | Number of segments and breaks. |
+| `sse` | Optimal within-segment SSE for that segment count. |
+| `n_parameters` | Free-parameter count (`2 * n_segments`). |
+| `bic`, `aic` | Information-criterion values; the minimum selects the regime count. |
+
+## `data/models/break_significance_tests.csv`
+
+Sequential `supF(l+1 | l)` tests for the global model. (`postwar_break_tests.csv`
+has the same schema for the postwar subsample.)
+
+| Column | Meaning |
+|---|---|
+| `segments_null`, `segments_alt` | Segment counts of the nested models being compared. |
+| `f_statistic` | F-style statistic for the additional break. |
+| `bootstrap_p_value` | Parametric-bootstrap p-value (break date is estimated, so distribution is non-standard). |
+| `n_bootstrap` | Bootstrap replications. |
+| `ssr_null`, `ssr_alt` | Optimal SSE of the smaller and larger models. |
+
+## `data/models/break_date_confidence_intervals.csv`
+
+Residual-bootstrap confidence intervals for the global model's break years.
+
+| Column | Meaning |
+|---|---|
+| `break_index` | Ordinal break number. |
+| `point_break_year` | Point-estimate break year. |
+| `bootstrap_median_year` | Median bootstrap break year. |
+| `ci_low_year`, `ci_high_year` | 90% percentile interval. |
+| `bootstrap_std_years` | Bootstrap standard deviation of the break year (dating precision). |
+| `n_bootstrap` | Bootstrap replications. |
+
+## `data/models/postwar_decomposition.csv`
+
+Re-segmentation of the postwar era three ways (postwar subsample under BIC and
+AIC, and the full sample under AIC).
+
+| Column | Meaning |
+|---|---|
+| `sample` | `postwar` or `full`. |
+| `criterion` | `bic` or `aic`. |
+| `start_year`, `end_year`, `n_observations` | Segment span and length. |
+| `mean_growth` | Segment mean annual growth. |
+| `regime` | `above_mean` or `below_mean`. |
+
+## `data/models/regime_robustness.csv`
+
+Regime segmentation re-estimated across robustness scenarios.
+
+| Column | Meaning |
+|---|---|
+| `scenario_id` | Scenario label (e.g. `min_segment_size_7`, `criterion_aic`, `exclude_...`). |
+| `criterion`, `min_segment_size` | Settings used in the scenario. |
+| `excluded_years` | Years dropped before refitting (empty if none). |
+| `segment_id`, `start_year`, `end_year`, `mean_growth`, `regime` | Fitted segment summary. |
+
+## `data/models/recurring_break_years.csv`
+
+Break years clustered across robustness scenarios within a two-year tolerance.
+
+| Column | Meaning |
+|---|---|
+| `cluster_id` | Cluster identifier. |
+| `representative_break_year` | Modal break year in the cluster. |
+| `min_break_year`, `max_break_year` | Range of years in the cluster. |
+| `n_breaks` | Number of contributing breaks. |
+| `n_scenarios` | Number of scenarios in which the break appears. |
+| `scenarios` | Comma-separated contributing scenario ids. |
+
+## `data/models/report_numbers.json`
+
+A flat mapping of every statistic quoted in the written report/article to its
+formatted value, generated by `us-gdp-regimes export-report-numbers`. The report
+inputs the corresponding LaTeX macros so prose cannot drift from the outputs.
 
 ## `data/models/fred_maddison_growth_comparison.csv`
 
