@@ -69,10 +69,6 @@ The scale of the total GDP proxy depends on the population units in the source, 
 │   ├── raw/
 │   ├── processed/
 │   └── models/
-├── docs/
-│   ├── article_outline.md
-│   ├── data_dictionary.md
-│   └── methods_note.md
 ├── figures/
 ├── notebooks/
 │   ├── 01_data_extraction_validation.ipynb
@@ -271,5 +267,6 @@ commercial use, with attribution.
 
 ## Publishing
 
-Archival on Zenodo (GitHub release → DOI) is documented in
-[docs/publishing_zenodo.md](docs/publishing_zenodo.md).
+Each tagged GitHub release is archived on Zenodo with a citable DOI. The concept
+DOI [10.5281/zenodo.21302054](https://doi.org/10.5281/zenodo.21302054) always
+resolves to the latest version.
