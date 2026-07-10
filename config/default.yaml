@@ -26,6 +26,10 @@ model:
   max_breaks: 8
   criterion: "bic"
   compare_with_fred: true
+  # Parametric-bootstrap replications for structural-break inference.
+  # supF sequential tests are the slower step; break-date CIs are cheaper.
+  break_test_bootstrap: 199
+  break_date_bootstrap: 499
 
 plots:
   dpi: 220

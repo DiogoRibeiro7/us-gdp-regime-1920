@@ -2,10 +2,17 @@
 \usepackage{airxiv}
 \usepackage{amsmath}
 \usepackage{array}
+\usepackage{booktabs}
 \usepackage{float}
 \usepackage{enumitem}
 
 \graphicspath{{../figures/}}
+
+% Machine-generated statistics. Regenerate with
+%   us-gdp-regimes export-report-numbers --config config/default.yaml
+% Every quoted number below is a macro defined in this file, so the prose can
+% never drift from the model outputs in data/models/.
+\input{generated_numbers.tex}
 
 \title{
   United States GDP Regimes, Fiscal Structure, and Distributional Growth\\
@@ -25,24 +32,29 @@
 \begin{abstract}
 This report summarizes a reproducible empirical workflow for long-run United
 States real GDP growth from 1920 onward. The analysis combines a Maddison-based
-real GDP proxy, FRED/BEA validation data, piecewise growth-regime detection,
-federal fiscal context, tax-regime event dynamics, and distributional measures
-linking GDP per capita to real worker earnings. The headline statistical result
-is that a single long-run trend fits the log GDP level well, but annual growth is
-better read as a sequence of regimes. The distributional result is equally
-important: aggregate real GDP per capita rose much faster than real median
-weekly earnings after the late 1970s, so GDP growth alone is an incomplete proxy
-for broad buying power. Fiscal and tax variables add useful context, but the
-report distinguishes descriptive timing, lagged association, and causal
-identification throughout.
+real GDP proxy, FRED/BEA validation data, piecewise growth-regime detection with
+formal structural-break inference, federal fiscal context, tax-regime event
+dynamics, and distributional measures linking GDP per capita to real worker
+earnings. The headline statistical result is that a single long-run trend fits
+the log GDP level well in-sample, but the level is statistically
+indistinguishable from a unit-root process, so annual growth --- which is
+stationary --- is the appropriate object for regime analysis. Growth is best
+read as a sequence of regimes, and a sequential bootstrap break test confirms
+the number of regimes that the information criterion selects. The distributional
+result is equally important: aggregate real GDP per capita rose much faster than
+real median weekly earnings after the late 1970s, so GDP growth alone is an
+incomplete proxy for broad buying power. Fiscal and tax variables add useful
+context, but the report distinguishes descriptive timing, lagged association,
+and causal identification throughout.
 \end{abstract}
 
-\keywords{United States GDP, growth regimes, public debt, tax policy, real wages,
-distributional analysis, local projections, reproducible research}
+\keywords{United States GDP, growth regimes, structural breaks, public debt, tax
+policy, real wages, distributional analysis, local projections, reproducible
+research}
 
 \reportnote{All generated tables and figures are reproducible from the Python
-pipeline in this repository. Raw downloaded data are intentionally excluded from
-version control.}
+pipeline in this repository. Every statistic in the text is a machine-generated
+macro; raw downloaded data are intentionally excluded from version control.}
 
 \section{Executive Summary}
 
@@ -54,19 +66,26 @@ process is segmented by depression, war, demobilisation, and a long postwar
 period.
 
 The fitted log-trend model implies an annualized trend growth rate of
-approximately $3.16\%$ and an $R^2$ of $0.987$. The piecewise growth model
-selects five broad regimes in the Maddison-derived annual GDP series: 1921--1928,
-1929--1933, 1934--1944, 1945--1949, and 1950--2022. These regimes are
-descriptive statistical summaries; they are not automatic causal explanations.
+approximately $\TrendGrowth\%$ with an in-sample $R^2$ of $\TrendRSquared$. That
+$R^2$ should not be read as evidence for a deterministic trend: augmented
+Dickey-Fuller and KPSS tests both indicate that log real GDP is consistent with
+a unit root, so a straight-line trend mechanically fits a persistent series
+well. Annual growth, by contrast, is stationary. The piecewise growth model
+selects $\NumRegimes$ broad regimes in the Maddison-derived annual GDP series
+(Table~\ref{tab:regimes}), and a sequential parametric-bootstrap break test
+agrees that additional regimes beyond this point are not statistically
+supported. These regimes are descriptive statistical summaries; they are not
+automatic causal explanations.
 
 The expanded fiscal and distributional layers change the interpretation. Federal
 debt, deficits, and tax laws help structure the historical narrative, but they
 are endogenous to the same shocks that affect GDP. More importantly, GDP per
-capita and real worker earnings diverged strongly after 1979. Indexed to 1979,
-real GDP per capita was about $208.6$ in 2023, while real median weekly earnings
-were about $110.4$. In other words, aggregate output per person more than
-doubled, while the median weekly earnings index increased by only about
-$10.4\%$ over the same base.
+capita and real worker earnings diverged strongly after the index base year
+$\IndexBaseYear$. Indexed to $\IndexBaseYear$, real GDP per capita was about
+$\GdppcIndexLatest$ by $\DistLatestYear$ (more than double its base-year level),
+while real median weekly earnings were about $\MedianEarningsIndexLatest$. In
+other words, aggregate output per person more than doubled, while the median
+weekly earnings index rose only modestly above its base.
 
 \section{Data and Reproducibility}
 
@@ -79,11 +98,12 @@ long-run real GDP proxy suitable for growth-rate and log-trend analysis from
 (\texttt{GDPCA}), available from 1929 onward.
 
 The source-validation table compares Maddison-derived growth with FRED/BEA
-growth from 1930 to 2022. The overlap has 93 annual observations, a growth-rate
-correlation of $0.955$, a mean absolute difference of $0.626$ percentage points,
-and an RMSE of $1.471$ percentage points. This is close enough for regime-level
-analysis, while still reminding the reader that Maddison historical estimates
-and BEA national accounts are not the same object.
+growth from $\OverlapStart$ to $\OverlapEnd$. The overlap has $\OverlapYears$
+annual observations, a growth-rate correlation of $\GrowthCorrelation$, a mean
+absolute difference of $\GrowthMad$ percentage points, and an RMSE of
+$\GrowthRmse$ percentage points. This is close enough for regime-level analysis,
+while still reminding the reader that Maddison historical estimates and BEA
+national accounts are not the same object.
 
 \subsection{Fiscal, Tax, and Distributional Data}
 
@@ -103,7 +123,7 @@ consumer units, not the full incidence of the tax-and-transfer system.
 
 \section{Methods}
 
-\subsection{Trend Model}
+\subsection{Trend Model and Unit-Root Diagnostics}
 
 The long-run trend is estimated on log real GDP:
 
@@ -111,11 +131,17 @@ The long-run trend is estimated on log real GDP:
   \log(GDP_t) = \alpha + \beta \cdot year_t + \epsilon_t.
 \end{equation}
 
-The annualized trend growth rate is computed as $\exp(\beta)-1$. This captures
-average exponential growth, but it intentionally does not model nonlinear
-business-cycle dynamics.
+The annualized trend growth rate is computed as $\exp(\beta)-1$. Because annual
+macroeconomic series are highly autocorrelated, the slope is reported with
+Newey-West heteroskedasticity- and autocorrelation-consistent (HAC) standard
+errors \cite{neweywest1987}, using $\TrendNwLags$ lags on $\TrendNobs$
+observations. To guard against a spurious-trend reading, the log level and the
+growth series are each tested with the augmented Dickey-Fuller test
+\cite{saiddickey1984}, whose null is a unit root, and the KPSS test
+\cite{kpss1992}, whose null is stationarity. Reporting both avoids over-reading a
+single test.
 
-\subsection{Piecewise Growth Regimes}
+\subsection{Piecewise Growth Regimes and Break Inference}
 
 Growth regimes are estimated on annual percent changes:
 
@@ -124,26 +150,40 @@ Growth regimes are estimated on annual percent changes:
 \end{equation}
 
 The algorithm searches over candidate breakpoints with dynamic programming and
-selects the segmentation with a BIC-style penalty. A segment is labelled
-``above mean'' if its mean growth rate exceeds the full-sample mean. This is a
-descriptive label, not a welfare or causality statement.
+selects the segmentation that minimizes a Gaussian information criterion (BIC by
+default), counting each segment mean, each break location, and the common
+residual variance as free parameters. A segment is labelled ``above mean'' if
+its mean growth rate exceeds the full-sample mean. This is a descriptive label,
+not a welfare or causality statement.
+
+The number of regimes is not taken on faith from the criterion. Each additional
+break is tested with a sequential $\text{supF}(l+1\,|\,l)$ statistic in the
+spirit of Bai and Perron \cite{baiperron1998,baiperron2003}. Because the break
+date is estimated, the statistic does not follow a standard $F$ distribution, so
+the p-value is obtained by a parametric bootstrap ($\BreakTestBootstrap$
+replications) that simulates data from the fitted smaller model. Uncertainty in
+the break \emph{locations} is quantified separately by a residual bootstrap
+($\BreakCiBootstrap$ replications) that re-segments each resample and reports
+percentile intervals for every break year.
 
 \subsection{Dynamic Tax Effects}
 
 The dynamic tax-effects layer uses two complementary designs. First, local
-projections estimate the association between a signed tax shock and future GDP
-growth at each horizon:
+projections \cite{jorda2005} estimate the association between a signed tax shock
+and future GDP growth at each horizon:
 
 \begin{equation}
   growth_{t+h} = \alpha_h + \beta_h shock_t +
   \gamma_h growth_{t-1} + \gamma'_h growth_{t-2} + e_{t+h}.
 \end{equation}
 
-Second, distributed-lag regressions include current and lagged tax shocks in a
-single annual growth equation. Both designs estimate delayed dynamics, but they
-do not solve identification by themselves. The report therefore separates all
-catalogued tax events from a smaller subset classified as plausibly exogenous
-long-run reforms.
+Because the horizon-$h$ local-projection residual is serially correlated up to
+order $h$ by construction, the Newey-West lag length grows with the horizon
+rather than being fixed. Second, distributed-lag regressions include current and
+lagged tax shocks in a single annual growth equation. Both designs estimate
+delayed dynamics, but they do not solve identification by themselves. The report
+therefore separates all catalogued tax events from a smaller subset classified
+as plausibly exogenous long-run reforms.
 
 \subsection{Distributional Analysis}
 
@@ -171,9 +211,16 @@ GDP growth or worker earnings.
 
 \subsection{Long-Run GDP Trend and Growth Regimes}
 
-Figure~\ref{fig:trend} shows the log real GDP path and fitted linear trend.
-The model fit is high, but the residuals and annual growth series show why the
-trend alone is not an adequate historical summary.
+Figure~\ref{fig:trend} shows the log real GDP path and fitted linear trend. The
+in-sample fit is high ($R^2 = \TrendRSquared$) and the slope is precisely
+estimated even under HAC standard errors (slope $t = \TrendHacT$). That
+precision, however, is exactly what a near-integrated series produces: the
+augmented Dickey-Fuller test does not reject a unit root in log real GDP (ADF
+statistic $\LevelAdfStat$, $p \LevelAdfP$), and the KPSS test rejects
+trend-stationarity ($p \LevelKpssP$). The annual growth series behaves the
+opposite way --- ADF rejects a unit root ($p \GrowthAdfP$) and KPSS does not
+reject stationarity ($p \GrowthKpssP$). This is the formal justification for
+analysing regimes on growth rather than on the level.
 
 \begin{figure}[H]
   \centering
@@ -186,8 +233,9 @@ trend alone is not an adequate historical summary.
 
 Table~\ref{tab:regimes} summarizes the fitted growth regimes. The severe
 1929--1933 contraction and the 1934--1944 rebound/mobilisation period dominate
-the early sample. The post-1950 period is long and relatively stable by this
-model's penalty criterion, with mean annual growth of approximately $3.11\%$.
+the early sample. The post-$\PostwarStart$ period is long and relatively stable
+by this model's penalty criterion, with mean annual growth of approximately
+$\PostwarMeanGrowth\%$ against a full-sample mean of $\LongRunMeanGrowth\%$.
 
 \begin{table}[H]
   \centering
@@ -197,12 +245,7 @@ model's penalty criterion, with mean annual growth of approximately $3.11\%$.
     \toprule
     Start & End & Years & Mean growth & Label \\
     \midrule
-    1921 & 1928 & 8  &  3.19\% & Above mean \\
-    1929 & 1933 & 5  & -5.78\% & Below mean \\
-    1934 & 1944 & 11 &  8.10\% & Above mean \\
-    1945 & 1949 & 5  & -1.98\% & Below mean \\
-    1950 & 2022 & 73 &  3.11\% & Above mean \\
-    \bottomrule
+    \input{generated_regime_table.tex}
   \end{tabular}
 \end{table}
 
@@ -214,15 +257,57 @@ model's penalty criterion, with mean annual growth of approximately $3.11\%$.
   \label{fig:regimes}
 \end{figure}
 
+\subsection{Are the Breaks Statistically Significant?}
+
+Table~\ref{tab:breaktests} reports the sequential break tests. Reading down the
+table, each additional regime up to the selected model earns a small
+bootstrap p-value, while the first insignificant step marks the point where the
+data stop supporting further segmentation. This is the formal counterpart of the
+information-criterion choice: the criterion and the test agree on the number of
+regimes.
+
+\begin{table}[H]
+  \centering
+  \caption{Sequential $\text{supF}(l+1\,|\,l)$ break tests with
+  parametric-bootstrap p-values}
+  \label{tab:breaktests}
+  \begin{tabular}{rrrr}
+    \toprule
+    Segments (null) & Segments (alt) & $F$ statistic & Bootstrap $p$ \\
+    \midrule
+    \input{generated_break_test_table.tex}
+  \end{tabular}
+\end{table}
+
+The break \emph{dates} are not equally well identified. Table~\ref{tab:breakcis}
+gives residual-bootstrap confidence intervals for each break year. The Depression
+and mobilisation breaks are sharp, whereas the start of the long postwar regime
+near $\WidestBreakYear$ is estimated very imprecisely, with a percentile interval
+spanning $\WidestBreakCiLow$--$\WidestBreakCiHigh$. The lesson is that a break
+being statistically present does not mean its timing is pinned down to a single
+year.
+
+\begin{table}[H]
+  \centering
+  \caption{Bootstrap confidence intervals for the estimated break years}
+  \label{tab:breakcis}
+  \begin{tabular}{rrcr}
+    \toprule
+    Break & Point year & 90\% interval & Std.\ (years) \\
+    \midrule
+    \input{generated_break_ci_table.tex}
+  \end{tabular}
+\end{table}
+
 \subsection{Fiscal Context}
 
 Adding federal fiscal ratios changes the narrative from a pure growth story to a
 macro-fiscal story. Debt and deficit measures vary sharply across wars,
 recessions, and crisis periods. Same-year correlations between fiscal ratios and
-GDP growth are modest. In the generated panel, gross debt-to-GDP has a
-same-year correlation with GDP growth of about $-0.317$ and a one-year-lag
-correlation of about $-0.261$. Receipts, outlays, and deficits have smaller
-simple correlations with annual growth.
+GDP growth are modest. In the generated panel, gross debt-to-GDP has a same-year
+correlation with GDP growth of about $\GrossDebtCorrSame$ and a one-year-lag
+correlation of about $\GrossDebtCorrLagOne$. Receipts, outlays, and deficits have
+smaller simple correlations with annual growth.
 
 \begin{figure}[H]
   \centering
@@ -261,18 +346,19 @@ channels across households and firms.
 \subsection{GDP Per Capita versus Worker Buying Power}
 
 Figure~\ref{fig:wagegap} is central to the distributional interpretation. Using
-1979 as the common index base, real GDP per capita reached about $208.6$ by
-2023, while real median weekly earnings reached about $110.4$. Real hourly
-compensation rose more than median weekly earnings, but still much less than
-GDP per capita. This means aggregate output per person can increase while the
-median worker's measured real earnings grow slowly.
+$\IndexBaseYear$ as the common index base, real GDP per capita reached about
+$\GdppcIndexLatest$ by $\DistLatestYear$, while real median weekly earnings
+reached about $\MedianEarningsIndexLatest$. Real hourly compensation
+($\HourlyCompIndexLatest$) rose more than median weekly earnings, but still much
+less than GDP per capita. This means aggregate output per person can increase
+while the median worker's measured real earnings grow slowly.
 
 \begin{figure}[H]
   \centering
   \includegraphics[width=\linewidth]{wage_gdp_gap.png}
   \caption{Real GDP per capita, real median weekly earnings, and real hourly
-  compensation indexed to 1979. The widening gap shows why GDP growth is not
-  equivalent to broad worker buying-power growth.}
+  compensation indexed to $\IndexBaseYear$. The widening gap shows why GDP growth
+  is not equivalent to broad worker buying-power growth.}
   \label{fig:wagegap}
 \end{figure}
 
@@ -286,11 +372,12 @@ consumption prices by income group.
 
 Figure~\ref{fig:taxburden} combines three views of tax burden. The first panel
 shows the composition of selected federal receipts. Social-insurance
-contributions rose from about $15.1\%$ of the selected federal receipt base in
-1947 to about $35.4\%$ in 2023. Corporate income taxes fell from about $29.6\%$
-to about $8.4\%$ over the same endpoint comparison. This is consistent with a
-long-run movement away from corporate income taxes and toward social-insurance
-financing.
+contributions rose from about $\SocialInsuranceShareFirst\%$ of the selected
+federal receipt base in $\ReceiptFirstYear$ to about
+$\SocialInsuranceShareLatest\%$ in $\ReceiptLatestYear$. Corporate income taxes
+fell from about $\CorporateShareFirst\%$ to about $\CorporateShareLatest\%$ over
+the same endpoint comparison. This is consistent with a long-run movement away
+from corporate income taxes and toward social-insurance financing.
 
 \begin{figure}[H]
   \centering
@@ -302,14 +389,15 @@ financing.
   \label{fig:taxburden}
 \end{figure}
 
-The Consumer Expenditure quintile panel begins in 1984. In that year, the
-highest income quintile's federal income-tax rate exceeded the average of the
-bottom four quintiles by about $5.25$ percentage points. By 2023, that spread
-was about $14.10$ percentage points. This particular income-tax measure therefore
-does not show a simple shift of federal income-tax burden away from the top
-quintile. The broader burden story is more nuanced: payroll-style financing
-became more important, corporate income-tax receipts became less important, and
-income-tax progressivity by quintile remained substantial.
+The Consumer Expenditure quintile panel begins in $\QuintileFirstYear$. In that
+year, the highest income quintile's federal income-tax rate exceeded the average
+of the bottom four quintiles by about $\QuintileSpreadFirst$ percentage points.
+By $\QuintileLatestYear$, that spread was about $\QuintileSpreadLatest$
+percentage points. This particular income-tax measure therefore does not show a
+simple shift of federal income-tax burden away from the top quintile. The broader
+burden story is more nuanced: payroll-style financing became more important,
+corporate income-tax receipts became less important, and income-tax
+progressivity by quintile remained substantial.
 
 \subsection{Association Screen}
 
@@ -331,9 +419,9 @@ The main limitation is identification. Breakpoints, fiscal ratios, tax laws, and
 wages all move with macroeconomic conditions. Recessions change tax receipts and
 policy decisions; wars change debt, output, and tax rates; inflation and
 monetary policy affect both GDP and real earnings. The tax-shock catalog partly
-addresses this by separating plausibly exogenous reforms from deficit,
-wartime, and countercyclical changes, but the classification remains historical
-and sample sizes are small.
+addresses this by separating plausibly exogenous reforms from deficit, wartime,
+and countercyclical changes, but the classification remains historical and
+sample sizes are small.
 
 The second limitation is measurement. Maddison is useful for long-run history
 but is not identical to BEA national accounts. Median weekly earnings are not
@@ -342,9 +430,10 @@ quintile tax rates cover federal income-tax amounts, not the full tax-and-
 transfer system. Receipt composition is a proxy for burden shifting, not a
 complete incidence analysis.
 
-The third limitation is temporal coverage. Some modern FRED series include
-annualized or partial latest-year observations, while Consumer Expenditure
-quintile data currently end earlier. The report therefore reports explicit
+The third limitation is temporal coverage. The Maddison-based GDP regime sample
+ends in $\PostwarEnd$, while several modern FRED series used in the fiscal and
+distributional layers extend to $\DistLatestYear$ and may include an annualized
+or partial latest-year observation. The report therefore reports explicit
 coverage by series and avoids implying that every dataset covers the same
 complete historical window.
 
@@ -352,17 +441,20 @@ complete historical window.
 
 The GDP regime analysis shows that the United States did not grow at one
 constant annual speed after 1920. A log trend summarizes the long-run level
-well, but annual growth is better read through regimes. Fiscal and tax data
-enrich the narrative, especially by showing how debt, deficits, tax-law changes,
-and federal receipt composition line up with macroeconomic periods.
+in-sample, but the level is statistically indistinguishable from a unit-root
+process, so stationary annual growth --- read through a small number of
+statistically supported regimes --- is the appropriate object of study. Fiscal
+and tax data enrich the narrative, especially by showing how debt, deficits,
+tax-law changes, and federal receipt composition line up with macroeconomic
+periods.
 
 The distributional extension changes the substantive interpretation. Real GDP
-per capita and real median weekly earnings diverged strongly after 1979. That
-does not negate GDP growth; it clarifies who may have participated in it. From a
-data-science perspective, the correct conclusion is not that GDP is useless, but
-that GDP is incomplete. A credible assessment of economic regimes should report
-aggregate output, fiscal structure, tax burden proxies, and worker purchasing
-power together.
+per capita and real median weekly earnings diverged strongly after
+$\IndexBaseYear$. That does not negate GDP growth; it clarifies who may have
+participated in it. From a data-science perspective, the correct conclusion is
+not that GDP is useless, but that GDP is incomplete. A credible assessment of
+economic regimes should report aggregate output, fiscal structure, tax burden
+proxies, and worker purchasing power together.
 
 \section*{Reproducibility Statement}
 
@@ -372,14 +464,49 @@ The report is generated from the repository pipeline:
   \item \texttt{us-gdp-regimes make-fiscal-context --config config/default.yaml}
   \item \texttt{us-gdp-regimes make-tax-effects --config config/default.yaml}
   \item \texttt{us-gdp-regimes make-distributional-analysis --config config/default.yaml}
+  \item \texttt{us-gdp-regimes export-report-numbers --config config/default.yaml}
 \end{itemize}
 
-The relevant notebooks are \texttt{01} through \texttt{06} in the
+The last command regenerates \texttt{generated\_numbers.tex} and the generated
+tables that this report inputs, so every quoted statistic is reconciled with the
+model outputs. The relevant notebooks are \texttt{01} through \texttt{06} in the
 \texttt{notebooks/} directory. Generated raw data, model CSVs, figures, and
-article assets are reproducible outputs and are not committed as raw source
-data.
+article assets are reproducible outputs and are not committed as raw source data.
 
 \begin{thebibliography}{9}
+
+\bibitem[Bai and Perron(1998)]{baiperron1998}
+Bai, J. and Perron, P.
+\newblock Estimating and testing linear models with multiple structural changes.
+\newblock \emph{Econometrica}, 66(1):47--78, 1998.
+
+\bibitem[Bai and Perron(2003)]{baiperron2003}
+Bai, J. and Perron, P.
+\newblock Computation and analysis of multiple structural change models.
+\newblock \emph{Journal of Applied Econometrics}, 18(1):1--22, 2003.
+
+\bibitem[Jord\`a(2005)]{jorda2005}
+Jord\`a, \`O.
+\newblock Estimation and inference of impulse responses by local projections.
+\newblock \emph{American Economic Review}, 95(1):161--182, 2005.
+
+\bibitem[Newey and West(1987)]{neweywest1987}
+Newey, W. K. and West, K. D.
+\newblock A simple, positive semi-definite, heteroskedasticity and
+autocorrelation consistent covariance matrix.
+\newblock \emph{Econometrica}, 55(3):703--708, 1987.
+
+\bibitem[Said and Dickey(1984)]{saiddickey1984}
+Said, S. E. and Dickey, D. A.
+\newblock Testing for unit roots in autoregressive-moving average models of
+unknown order.
+\newblock \emph{Biometrika}, 71(3):599--607, 1984.
+
+\bibitem[Kwiatkowski et al.(1992)]{kpss1992}
+Kwiatkowski, D., Phillips, P. C. B., Schmidt, P., and Shin, Y.
+\newblock Testing the null hypothesis of stationarity against the alternative of
+a unit root.
+\newblock \emph{Journal of Econometrics}, 54(1--3):159--178, 1992.
 
 \bibitem[Maddison Project Database(2023)]{maddison2023}
 Maddison Project Database.
@@ -415,11 +542,6 @@ U.S. Bureau of Labor Statistics.
 U.S. Bureau of Economic Analysis.
 \newblock National Income and Product Accounts.
 \newblock \url{https://www.bea.gov/data/gdp/gross-domestic-product}.
-
-\bibitem[arXiv TeX Guidance]{arxivtex}
-arXiv.
-\newblock Submit TeX/LaTeX.
-\newblock \url{https://info.arxiv.org/help/submit_tex.html}.
 
 \end{thebibliography}
 

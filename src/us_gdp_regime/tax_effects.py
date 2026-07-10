@@ -401,6 +401,7 @@ def fit_local_projections(
             model_frame,
             dependent_column=f"{outcome_column}_lead{horizon}",
             x_columns=x_columns,
+            hac_lags=horizon + 1,
         )
         rows.append(
             _coefficient_row(
@@ -475,7 +476,12 @@ def fit_distributed_lag_model(
     if len(model_frame) <= len(x_columns) + 2:
         raise ValueError("Not enough observations for distributed-lag model.")
 
-    result = _fit_ols(model_frame, dependent_column=outcome_column, x_columns=x_columns)
+    result = _fit_ols(
+        model_frame,
+        dependent_column=outcome_column,
+        x_columns=x_columns,
+        hac_lags=max_lag + 1,
+    )
     rows: list[dict[str, float | int | str]] = []
     cumulative_effect = 0.0
     for lag, term in enumerate(shock_lag_columns):
@@ -562,11 +568,24 @@ def _fit_ols(
     model_frame: pd.DataFrame,
     dependent_column: str,
     x_columns: Sequence[str],
+    hac_lags: int = 1,
 ) -> RegressionResultsWrapper:
-    """Fit OLS with HAC covariance for annual dynamic regressions."""
+    """Fit OLS with HAC covariance for annual dynamic regressions.
+
+    For Jorda (2005) local projections the horizon-``h`` residual is serially
+    correlated up to order ``h`` by construction, so the Newey-West truncation
+    lag must grow with the horizon rather than stay fixed at one. Callers pass
+    ``hac_lags = horizon + 1`` for local projections and ``max_lag + 1`` for
+    distributed-lag models.
+
+    References
+    ----------
+    Jorda, O. (2005). Estimation and inference of impulse responses by local
+    projections. *American Economic Review*, 95(1), 161-182.
+    """
     y = model_frame[dependent_column].astype(float)
     x = sm.add_constant(model_frame[list(x_columns)].astype(float), has_constant="add")
-    return sm.OLS(y, x).fit(cov_type="HAC", cov_kwds={"maxlags": 1})
+    return sm.OLS(y, x).fit(cov_type="HAC", cov_kwds={"maxlags": max(hac_lags, 1)})
 
 
 def _coefficient_row(

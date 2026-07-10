@@ -53,6 +53,8 @@ class ModelConfig:
     max_breaks: int
     criterion: Criterion
     compare_with_fred: bool
+    break_test_bootstrap: int = 199
+    break_date_bootstrap: int = 499
 
 
 @dataclass(frozen=True)
@@ -152,6 +154,8 @@ def load_config(path: str | Path) -> AppConfig:
             max_breaks=int(model_raw["max_breaks"]),
             criterion=criterion,
             compare_with_fred=bool(model_raw.get("compare_with_fred", True)),
+            break_test_bootstrap=int(model_raw.get("break_test_bootstrap", 199)),
+            break_date_bootstrap=int(model_raw.get("break_date_bootstrap", 499)),
         ),
         plots=PlotConfig(dpi=int(plots_raw.get("dpi", 160))),
     )

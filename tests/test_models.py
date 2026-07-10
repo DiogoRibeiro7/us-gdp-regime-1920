@@ -4,11 +4,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from us_gdp_regime.models import fit_growth_regimes, fit_log_trend, select_piecewise_breakpoints
+from us_gdp_regime.models import (
+    fit_growth_regimes,
+    fit_log_trend,
+    newey_west_lags,
+    segmentation_n_parameters,
+    segmentation_ssr_path,
+    select_piecewise_breakpoints,
+)
 
 
 def test_fit_log_trend_detects_positive_growth() -> None:
-    years = np.arange(1920, 1930)
+    years = np.arange(1920, 1970)
     real_gdp = 100.0 * (1.03 ** np.arange(len(years)))
     df = pd.DataFrame({"year": years, "log_real_gdp": np.log(real_gdp)})
 
@@ -17,6 +24,34 @@ def test_fit_log_trend_detects_positive_growth() -> None:
     assert result.annualised_growth_rate > 2.9
     assert result.r_squared > 0.999
     assert "fitted_log_real_gdp" in fitted.columns
+
+
+def test_fit_log_trend_reports_hac_inference() -> None:
+    rng = np.random.default_rng(3)
+    years = np.arange(1920, 2020)
+    log_gdp = np.log(100.0) + 0.03 * np.arange(len(years)) + rng.normal(0.0, 0.05, len(years))
+    df = pd.DataFrame({"year": years, "log_real_gdp": log_gdp})
+
+    result, _ = fit_log_trend(df)
+
+    assert result.n_observations == len(years)
+    assert result.hac_lags == newey_west_lags(len(years))
+    assert result.slope_std_error > 0.0
+    assert result.slope_t_statistic > 0.0
+    assert 0.0 <= result.slope_p_value <= 1.0
+
+
+def test_segmentation_selection_path_and_parameter_count() -> None:
+    values = np.concatenate([np.repeat(1.0, 10), np.repeat(5.0, 10), np.repeat(0.0, 10)])
+
+    path = segmentation_ssr_path(values, min_segment_size=5, max_breaks=4)
+
+    assert list(path["n_segments"]) == [1, 2, 3, 4, 5]
+    # SSE is non-increasing in the number of segments.
+    assert (path["sse"].diff().dropna() <= 1e-9).all()
+    # Three true regimes should minimise BIC.
+    assert int(path.loc[path["bic"].idxmin(), "n_segments"]) == 3
+    assert segmentation_n_parameters(3) == 6
 
 
 def test_piecewise_breakpoints_on_synthetic_regimes() -> None:

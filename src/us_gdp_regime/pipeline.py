@@ -39,7 +39,17 @@ from us_gdp_regime.fiscal import (
     summarize_fiscal_growth_correlations,
     tax_event_study,
 )
-from us_gdp_regime.models import assign_segment_labels, fit_growth_regimes, fit_log_trend
+from us_gdp_regime.inference import (
+    bootstrap_break_dates,
+    sequential_break_tests,
+    unit_root_diagnostics,
+)
+from us_gdp_regime.models import (
+    assign_segment_labels,
+    fit_growth_regimes,
+    fit_log_trend,
+    segmentation_ssr_path,
+)
 from us_gdp_regime.plotting import (
     plot_dynamic_tax_event_study,
     plot_fiscal_context,
@@ -51,6 +61,7 @@ from us_gdp_regime.plotting import (
     plot_tax_local_projections,
     plot_wage_gdp_gap,
 )
+from us_gdp_regime.report_numbers import write_report_numbers
 from us_gdp_regime.source_validation import (
     build_growth_comparison,
     plot_growth_comparison,
@@ -218,11 +229,11 @@ def _load_prepared_series(config: AppConfig) -> pd.DataFrame:
 
 
 def fit_models(config: AppConfig, series: pd.DataFrame | None = None) -> dict[str, Path]:
-    """Fit trend and regime models and save model outputs."""
+    """Fit trend and regime models, formal inference, and save model outputs."""
     _ensure_directories(config)
     work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
     trend_result, _ = fit_log_trend(work)
-    _, segment_frame = fit_growth_regimes(
+    segments, segment_frame = fit_growth_regimes(
         work,
         min_segment_size=config.model.min_segment_size,
         max_breaks=config.model.max_breaks,
@@ -233,7 +244,58 @@ def fit_models(config: AppConfig, series: pd.DataFrame | None = None) -> dict[st
     segment_path = config.paths.models_dir / "regime_segments.csv"
     pd.DataFrame([trend_result.__dict__]).to_csv(trend_path, index=False)
     segment_frame.to_csv(segment_path, index=False)
-    return {"trend": trend_path, "segments": segment_path}
+    outputs = {"trend": trend_path, "segments": segment_path}
+
+    outputs.update(_write_inference_outputs(config, work, n_selected_breaks=len(segments) - 1))
+    return outputs
+
+
+def _write_inference_outputs(
+    config: AppConfig,
+    work: pd.DataFrame,
+    n_selected_breaks: int,
+) -> dict[str, Path]:
+    """Write unit-root, model-selection, and structural-break inference tables."""
+    models_dir = config.paths.models_dir
+    growth = work["gdp_growth"].dropna().to_numpy(dtype=float)
+
+    unit_root = unit_root_diagnostics(work)
+    selection = segmentation_ssr_path(
+        growth,
+        min_segment_size=config.model.min_segment_size,
+        max_breaks=config.model.max_breaks,
+    )
+    break_tests = sequential_break_tests(
+        growth,
+        min_segment_size=config.model.min_segment_size,
+        max_breaks=config.model.max_breaks,
+        n_bootstrap=config.model.break_test_bootstrap,
+    )
+
+    unit_root_path = models_dir / "unit_root_tests.csv"
+    selection_path = models_dir / "segmentation_selection.csv"
+    break_tests_path = models_dir / "break_significance_tests.csv"
+    unit_root.to_csv(unit_root_path, index=False)
+    selection.to_csv(selection_path, index=False)
+    break_tests.to_csv(break_tests_path, index=False)
+
+    outputs = {
+        "unit_root_tests": unit_root_path,
+        "segmentation_selection": selection_path,
+        "break_significance_tests": break_tests_path,
+    }
+
+    if n_selected_breaks >= 1:
+        break_dates = bootstrap_break_dates(
+            work,
+            n_breaks=n_selected_breaks,
+            min_segment_size=config.model.min_segment_size,
+            n_bootstrap=config.model.break_date_bootstrap,
+        )
+        break_dates_path = models_dir / "break_date_confidence_intervals.csv"
+        break_dates.to_csv(break_dates_path, index=False)
+        outputs["break_date_confidence_intervals"] = break_dates_path
+    return outputs
 
 
 def make_figures(config: AppConfig, series: pd.DataFrame | None = None) -> dict[str, Path]:
@@ -556,6 +618,18 @@ def export_article_assets(config: AppConfig) -> dict[str, Path]:
     )
 
 
+def export_report_numbers(
+    config: AppConfig,
+    reports_dir: Path = Path("reports"),
+) -> dict[str, Path]:
+    """Extract every reported statistic into a JSON record and LaTeX macros.
+
+    This reads the generated model CSVs and writes reproducible numbers so the
+    written report and article reference macros instead of hard-coded values.
+    """
+    return write_report_numbers(models_dir=config.paths.models_dir, reports_dir=reports_dir)
+
+
 def run_pipeline(config: AppConfig) -> dict[str, Path]:
     """Run the complete GDP regime pipeline.
 
@@ -581,4 +655,5 @@ def run_pipeline(config: AppConfig) -> dict[str, Path]:
     labelled_series = assign_segment_labels(series, segments)
     processed_path = config.paths.processed_dir / "us_gdp_series.csv"
     labelled_series.to_csv(processed_path, index=False)
-    return data_outputs | model_outputs | figure_outputs | article_outputs
+    number_outputs = export_report_numbers(config)
+    return data_outputs | model_outputs | figure_outputs | article_outputs | number_outputs

@@ -10,9 +10,26 @@ First, it estimates the long-run trend of United States real GDP using a linear 
 log(GDP_t) = alpha + beta * year_t + error_t
 ```
 
-This is a compact way to estimate an average exponential growth path.
+This is a compact way to estimate an average exponential growth path. The slope
+is reported with Newey-West heteroskedasticity- and autocorrelation-consistent
+(HAC) standard errors, because annual macroeconomic residuals are serially
+correlated and ordinary OLS standard errors would overstate precision.
 
 Second, it estimates growth regimes using annual real GDP growth. This is more meaningful than applying above/below-mean labels to GDP levels, because the level is non-stationary and mechanically higher in later decades.
+
+## Unit-root diagnostics
+
+The high R-squared of the log-trend regression must not be read as evidence for a
+deterministic trend. Log real GDP is close to a unit-root process, and a straight
+line mechanically fits a near-integrated series well. The pipeline therefore runs
+two complementary tests on both the log level and the growth series:
+
+1. the augmented Dickey-Fuller (ADF) test, whose null is a unit root, and
+2. the KPSS test, whose null is stationarity.
+
+In the current data the log level is consistent with a unit root while growth is
+stationary. This is the formal justification for segmenting growth rather than
+the level. Results are written to `data/models/unit_root_tests.csv`.
 
 ## Piecewise regression
 
@@ -24,9 +41,31 @@ growth_t = mu_j + error_t, for t in segment j
 
 The algorithm searches over possible breakpoints using dynamic programming. For each candidate segmentation it computes the within-segment sum of squared errors. The selected model minimises an information criterion, BIC by default.
 
+The information criterion counts each segment mean, each break location, and the
+common residual variance as free parameters, so a model with `k` segments carries
+`2k` parameters. This keeps the Gaussian BIC and AIC complete rather than off by
+one.
+
 ## Why BIC?
 
 BIC penalises extra segments more strongly than AIC. That is appropriate here because the article should not overfit every recession or temporary rebound. The goal is to identify broad growth regimes, not every business-cycle fluctuation.
+
+## Are the breaks statistically supported?
+
+The number of regimes is not taken on faith from the information criterion. Two
+inference layers accompany it:
+
+1. A sequential `supF(l+1 | l)` test compares the optimal `l`-segment and
+   `(l+1)`-segment models. Because the break date is estimated, the statistic
+   does not follow a standard F distribution, so its p-value is obtained by a
+   parametric bootstrap that simulates from the fitted smaller model. Results are
+   written to `data/models/break_significance_tests.csv`, and the full
+   selection curve (SSE, BIC, AIC by segment count) to
+   `data/models/segmentation_selection.csv`.
+2. A residual bootstrap re-segments resampled series to produce percentile
+   confidence intervals for each break year, written to
+   `data/models/break_date_confidence_intervals.csv`. This distinguishes breaks
+   whose dates are sharp from breaks whose timing is poorly identified.
 
 ## Above/below mean labels
 
@@ -70,7 +109,10 @@ First, local projections estimate a separate regression for each horizon:
 growth_(t+h) = alpha_h + beta_h * tax_shock_t + controls_t + error_(t+h)
 ```
 
-This is useful when effects appear gradually, reverse, or fade over time.
+This is useful when effects appear gradually, reverse, or fade over time. Each
+horizon is estimated with HAC standard errors whose Newey-West lag length grows
+with the horizon, because the horizon-`h` local-projection residual is serially
+correlated up to order `h` by construction (Jordà, 2005).
 
 Second, distributed-lag regressions include current and lagged tax shocks in one
 model:

@@ -8,14 +8,16 @@ The core question is simple:
 
 The workflow estimates:
 
-1. A long-run trend regression on log real GDP.
-2. Annual real GDP growth.
-3. Piecewise constant growth regimes.
-4. Above-mean and below-mean periods.
-5. Article-ready tables and figures.
-6. Optional fiscal context: federal debt, budget ratios, and broad tax-regime event windows.
-7. Optional dynamic tax-regime effect estimates with local projections and distributed lags.
-8. Optional distributional analysis: tax-burden shift proxies and GDP per capita versus real wages.
+1. A long-run trend regression on log real GDP, with Newey-West (HAC) standard errors.
+2. Unit-root diagnostics (ADF and KPSS) on the level and the growth series.
+3. Annual real GDP growth.
+4. Piecewise constant growth regimes.
+5. Formal structural-break inference: sequential bootstrap supF tests and bootstrap confidence intervals for the break years.
+6. Above-mean and below-mean periods.
+7. Article-ready tables and figures, plus a machine-generated numbers/macros file so the written report never drifts from the outputs.
+8. Optional fiscal context: federal debt, budget ratios, and broad tax-regime event windows.
+9. Optional dynamic tax-regime effect estimates with horizon-scaled-HAC local projections and distributed lags.
+10. Optional distributional analysis: tax-burden shift proxies and GDP per capita versus real wages.
 
 ## Why not use World Bank only?
 
@@ -135,8 +137,15 @@ us-gdp-regimes make-figures --config config/default.yaml
 us-gdp-regimes make-fiscal-context --config config/default.yaml
 us-gdp-regimes make-tax-effects --config config/default.yaml
 us-gdp-regimes make-distributional-analysis --config config/default.yaml
+us-gdp-regimes export-report-numbers --config config/default.yaml
 us-gdp-regimes run --config config/default.yaml
 ```
+
+`export-report-numbers` reads the generated model CSVs and writes
+`data/models/report_numbers.json` plus `reports/generated_numbers.tex` and the
+generated LaTeX table bodies. The report inputs those files, so every statistic
+in the written narrative is reconciled with the model outputs. `make report`
+runs every analysis layer and then compiles the PDF (requires a LaTeX toolchain).
 
 The CLI is intentionally thin: each command delegates to the pipeline module and
 prints the paths it generated.

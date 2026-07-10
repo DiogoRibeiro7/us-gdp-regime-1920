@@ -9,6 +9,7 @@ import typer
 
 from us_gdp_regime.config import load_config
 from us_gdp_regime.pipeline import download_data as pipeline_download_data
+from us_gdp_regime.pipeline import export_report_numbers as pipeline_export_report_numbers
 from us_gdp_regime.pipeline import fit_models as pipeline_fit_models
 from us_gdp_regime.pipeline import (
     make_distributional_analysis as pipeline_make_distributional_analysis,
@@ -84,6 +85,14 @@ def make_distributional_analysis(
 ) -> None:
     """Create tax-burden shift and wage/GDP distributional outputs."""
     _print_outputs(pipeline_make_distributional_analysis(load_config(config)))
+
+
+@app.command("export-report-numbers")
+def export_report_numbers(
+    config: ConfigOption = Path("config/default.yaml"),
+) -> None:
+    """Extract reported statistics into a JSON record and LaTeX macros."""
+    _print_outputs(pipeline_export_report_numbers(load_config(config)))
 
 
 @app.command()
