@@ -19,8 +19,9 @@ type: software
 authors:
   - given-names: Diogo
     family-names: Ribeiro
-    email: hansolo.dj@gmail.com
-    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add your ORCID if you have one
+    email: dfr@esmad.ipp.pt
+    orcid: "https://orcid.org/0009-0001-2022-7072"
+    affiliation: "ESMAD, Instituto Politécnico do Porto"
 version: 1.0.0
 date-released: "2026-07-10"
 license: CC-BY-4.0
