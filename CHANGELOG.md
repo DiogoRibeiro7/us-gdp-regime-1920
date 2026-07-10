@@ -6,6 +6,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-07-11
+
 ### Added
 
 - Break- and power-robust unit-root tests on the log level: DF-GLS
@@ -50,5 +52,6 @@ First public release, archived on Zenodo
 - Academic LaTeX report, Medium-style article, notebooks, tests, CI, and Zenodo
   publishing metadata (CC-BY-4.0 license, `CITATION.cff`, `.zenodo.json`).
 
-[Unreleased]: https://github.com/DiogoRibeiro7/us-gdp-regime-1920/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/DiogoRibeiro7/us-gdp-regime-1920/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/DiogoRibeiro7/us-gdp-regime-1920/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/DiogoRibeiro7/us-gdp-regime-1920/releases/tag/v1.0.0

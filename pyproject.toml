@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "us-gdp-regime"
-version = "1.0.0"
+version = "1.1.0"
 description = "United States GDP trend and piecewise growth regime analysis from 1920 onward."
 readme = "README.md"
 requires-python = ">=3.11"
