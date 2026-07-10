@@ -59,6 +59,39 @@ are endogenous to recessions, wars, inflation, monetary policy, and GDP itself.
 The fiscal tables can structure historical interpretation, but they do not
 identify causal tax or debt effects on GDP.
 
+## Dynamic tax-regime effects
+
+The tax-effects layer asks whether GDP growth changes with a delay after
+federal tax-regime changes. It uses three complementary designs.
+
+First, local projections estimate a separate regression for each horizon:
+
+```text
+growth_(t+h) = alpha_h + beta_h * tax_shock_t + controls_t + error_(t+h)
+```
+
+This is useful when effects appear gradually, reverse, or fade over time.
+
+Second, distributed-lag regressions include current and lagged tax shocks in one
+model:
+
+```text
+growth_t = alpha + beta_0 * shock_t + beta_1 * shock_(t-1) + ... + controls_t + error_t
+```
+
+This compresses delayed responses into a current-year model and reports
+cumulative coefficients through each lag.
+
+Third, dynamic event studies compare each event-relative year with the event's
+own pre-event growth average. This is a transparent visual check for delayed
+patterns around tax-law dates.
+
+The tax-shock catalog separates all events from a smaller set classified as
+plausibly exogenous long-run reforms. Causal language should be limited to that
+subset and still treated as model-dependent. Deficit-reduction packages,
+wartime finance, recession responses, and mixed reforms should not be pooled
+with long-run reforms without showing the classification.
+
 ## Historical interpretation
 
 The regimes should be interpreted with historical care. Likely contextual periods include:

@@ -14,6 +14,7 @@ The workflow estimates:
 4. Above-mean and below-mean periods.
 5. Article-ready tables and figures.
 6. Optional fiscal context: federal debt, budget ratios, and broad tax-regime event windows.
+7. Optional dynamic tax-regime effect estimates with local projections and distributed lags.
 
 ## Why not use World Bank only?
 
@@ -71,7 +72,8 @@ The scale of the total GDP proxy depends on the population units in the source, 
 │   ├── 01_data_extraction_validation.ipynb
 │   ├── 02_regression_piecewise_regimes.ipynb
 │   ├── 03_article_figures_tables.ipynb
-│   └── 04_fiscal_debt_tax_context.ipynb
+│   ├── 04_fiscal_debt_tax_context.ipynb
+│   └── 05_tax_regime_effects.ipynb
 ├── pyproject.toml
 ├── src/us_gdp_regime/
 └── tests/
@@ -129,6 +131,7 @@ us-gdp-regimes prepare-data --config config/default.yaml
 us-gdp-regimes fit-models --config config/default.yaml
 us-gdp-regimes make-figures --config config/default.yaml
 us-gdp-regimes make-fiscal-context --config config/default.yaml
+us-gdp-regimes make-tax-effects --config config/default.yaml
 us-gdp-regimes run --config config/default.yaml
 ```
 
@@ -148,6 +151,23 @@ data/models/tax_event_growth_windows.csv
 figures/fiscal_context.png
 figures/tax_event_growth_windows.png
 ```
+
+The tax-effects command estimates delayed GDP-growth dynamics after tax-regime
+changes. It writes:
+
+```text
+data/models/tax_shock_catalog.csv
+data/models/tax_effect_panel.csv
+data/models/tax_local_projections.csv
+data/models/tax_distributed_lags.csv
+data/models/tax_dynamic_event_study.csv
+figures/tax_local_projections.png
+figures/tax_dynamic_event_study.png
+```
+
+The tax-effects outputs include both all catalogued tax shocks and a smaller
+subset classified as plausibly exogenous long-run reforms. The latter is the
+more appropriate sample for causal discussion, but it remains model-dependent.
 
 ## Run tests
 
@@ -178,6 +198,7 @@ Breakpoints are selected using dynamic programming over piecewise constant means
 - The Great Depression, World War II, postwar demobilisation, the Volcker period, the Global Financial Crisis, COVID-19, and the post-COVID recovery can generate large breakpoints. Do not interpret all statistical breaks as policy breaks without historical triangulation.
 - Above-mean and below-mean are descriptive labels, not causal claims.
 - Fiscal and tax-regime outputs are descriptive context. Public debt, deficits, receipts, outlays, and tax law respond to GDP shocks and policy choices, so simple correlations, regressions, and event windows should not be read as causal tax or debt effects.
+- Dynamic tax-effect outputs are stronger than same-year event windows because they model delayed responses, but causal interpretation still depends on the narrative tax-shock classification and on using plausibly exogenous events.
 
 ## Suggested article question
 

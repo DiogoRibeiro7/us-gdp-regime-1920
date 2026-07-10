@@ -29,16 +29,25 @@ from us_gdp_regime.fiscal import (
 )
 from us_gdp_regime.models import assign_segment_labels, fit_growth_regimes, fit_log_trend
 from us_gdp_regime.plotting import (
+    plot_dynamic_tax_event_study,
     plot_fiscal_context,
     plot_growth_regimes,
     plot_growth_regimes_annotated,
     plot_log_gdp_trend,
     plot_tax_event_growth_windows,
+    plot_tax_local_projections,
 )
 from us_gdp_regime.source_validation import (
     build_growth_comparison,
     plot_growth_comparison,
     write_source_validation_outputs,
+)
+from us_gdp_regime.tax_effects import (
+    build_tax_effect_panel,
+    build_tax_shock_catalog,
+    dynamic_tax_event_study,
+    fit_distributed_lag_model,
+    fit_local_projections,
 )
 from us_gdp_regime.transform import validate_gdp_series
 
@@ -327,6 +336,97 @@ def make_fiscal_context(config: AppConfig, series: pd.DataFrame | None = None) -
     outputs["fiscal_context_figure"] = fiscal_figure_path
     outputs["tax_event_growth_windows_figure"] = tax_figure_path
     return outputs
+
+
+def make_tax_effects(config: AppConfig, series: pd.DataFrame | None = None) -> dict[str, Path]:
+    """Build dynamic tax-regime effect outputs."""
+    _ensure_directories(config)
+    work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
+    segments, _ = fit_growth_regimes(
+        work,
+        min_segment_size=config.model.min_segment_size,
+        max_breaks=config.model.max_breaks,
+        criterion=config.model.criterion,
+    )
+    labelled_series = assign_segment_labels(work, segments)
+
+    fiscal_context_path = config.paths.models_dir / "fiscal_context.csv"
+    if not fiscal_context_path.exists():
+        try:
+            make_fiscal_context(config, series=work)
+        except (FileNotFoundError, DataSourceError, ValueError):
+            pass
+    fiscal_context = pd.read_csv(fiscal_context_path) if fiscal_context_path.exists() else None
+
+    catalog = build_tax_shock_catalog()
+    effect_panel = build_tax_effect_panel(
+        gdp=labelled_series,
+        catalog=catalog,
+        fiscal_context=fiscal_context,
+    )
+
+    local_projection_frames = [
+        fit_local_projections(effect_panel, shock_column="tax_shock_all", outcome_lags=2),
+        fit_local_projections(effect_panel, shock_column="tax_shock_exogenous", outcome_lags=2),
+    ]
+    local_projections = pd.concat(
+        [frame for frame in local_projection_frames if not frame.empty],
+        ignore_index=True,
+    )
+
+    distributed_lag_frames = [
+        fit_distributed_lag_model(
+            effect_panel,
+            shock_column="tax_shock_all",
+            max_lag=7,
+            outcome_lags=2,
+        ),
+        fit_distributed_lag_model(
+            effect_panel,
+            shock_column="tax_shock_exogenous",
+            max_lag=7,
+            outcome_lags=2,
+        ),
+    ]
+    distributed_lags = pd.concat(distributed_lag_frames, ignore_index=True)
+
+    event_study = pd.concat(
+        [
+            dynamic_tax_event_study(effect_panel, catalog, exogenous_only=False),
+            dynamic_tax_event_study(effect_panel, catalog, exogenous_only=True),
+        ],
+        ignore_index=True,
+    )
+
+    catalog_path = config.paths.models_dir / "tax_shock_catalog.csv"
+    panel_path = config.paths.models_dir / "tax_effect_panel.csv"
+    local_projection_path = config.paths.models_dir / "tax_local_projections.csv"
+    distributed_lag_path = config.paths.models_dir / "tax_distributed_lags.csv"
+    event_study_path = config.paths.models_dir / "tax_dynamic_event_study.csv"
+    local_projection_figure_path = config.paths.figures_dir / "tax_local_projections.png"
+    event_study_figure_path = config.paths.figures_dir / "tax_dynamic_event_study.png"
+
+    catalog.to_csv(catalog_path, index=False)
+    effect_panel.to_csv(panel_path, index=False)
+    local_projections.to_csv(local_projection_path, index=False)
+    distributed_lags.to_csv(distributed_lag_path, index=False)
+    event_study.to_csv(event_study_path, index=False)
+    plot_tax_local_projections(
+        local_projections,
+        local_projection_figure_path,
+        dpi=config.plots.dpi,
+    )
+    plot_dynamic_tax_event_study(event_study, event_study_figure_path, dpi=config.plots.dpi)
+
+    return {
+        "tax_shock_catalog": catalog_path,
+        "tax_effect_panel": panel_path,
+        "tax_local_projections": local_projection_path,
+        "tax_distributed_lags": distributed_lag_path,
+        "tax_dynamic_event_study": event_study_path,
+        "tax_local_projections_figure": local_projection_figure_path,
+        "tax_dynamic_event_study_figure": event_study_figure_path,
+    }
 
 
 def export_article_assets(config: AppConfig) -> dict[str, Path]:

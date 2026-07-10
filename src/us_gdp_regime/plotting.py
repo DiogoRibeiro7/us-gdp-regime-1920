@@ -649,3 +649,105 @@ def plot_tax_event_growth_windows(
     fig.subplots_adjust(left=0.31, right=0.97, top=0.87, bottom=0.10)
     _save(fig, output_path, dpi)
     return output_path
+
+
+def plot_tax_local_projections(
+    projections: pd.DataFrame,
+    output_path: Path,
+    dpi: int = 160,
+) -> Path:
+    """Plot local-projection GDP-growth responses to tax shocks."""
+    required = {"horizon", "coefficient", "conf_low", "conf_high", "shock_column"}
+    missing = required.difference(projections.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    _apply_theme()
+    work = projections.sort_values(["shock_column", "horizon"]).copy()
+    fig, ax = plt.subplots(figsize=(12.5, 6.8))
+    _title(
+        fig,
+        "Tax-shock local projections show delayed GDP-growth associations",
+        "Lines estimate future annual GDP growth at each horizon after a signed tax-regime shock.",
+    )
+    _style_axis(ax)
+
+    series_styles = {
+        "tax_shock_all": (PALETTE["blue"], "All tax shocks"),
+        "tax_shock_exogenous": (PALETTE["green"], "Plausibly exogenous shocks"),
+    }
+    for shock_column, group in work.groupby("shock_column"):
+        color, label = series_styles.get(str(shock_column), (PALETTE["orange"], str(shock_column)))
+        x = group["horizon"].to_numpy(dtype=float)
+        coefficient = group["coefficient"].to_numpy(dtype=float)
+        conf_low = group["conf_low"].to_numpy(dtype=float)
+        conf_high = group["conf_high"].to_numpy(dtype=float)
+        ax.plot(x, coefficient, color=color, linewidth=2.7, marker="o", label=label)
+        ax.fill_between(x, conf_low, conf_high, color=color, alpha=0.16)
+
+    ax.axhline(0, color=PALETTE["ink"], linewidth=1.0)
+    ax.set_xlabel("Years after tax-regime shock")
+    ax.set_ylabel("Estimated GDP-growth response")
+    ax.yaxis.set_major_formatter(_percent_formatter())
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.legend(loc="best")
+    _source_note(
+        fig,
+        "Source: Maddison GDP growth and curated tax-shock catalog. "
+        "Causal interpretation is limited to plausibly exogenous shocks "
+        "and remains model-dependent.",
+    )
+    fig.subplots_adjust(left=0.075, right=0.98, top=0.84, bottom=0.14)
+    _save(fig, output_path, dpi)
+    return output_path
+
+
+def plot_dynamic_tax_event_study(
+    event_study: pd.DataFrame,
+    output_path: Path,
+    dpi: int = 160,
+) -> Path:
+    """Plot event-relative GDP-growth changes around tax-regime events."""
+    required = {"relative_year", "mean_growth_minus_pre", "conf_low", "conf_high", "sample"}
+    missing = required.difference(event_study.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    _apply_theme()
+    work = event_study.sort_values(["sample", "relative_year"]).copy()
+    fig, ax = plt.subplots(figsize=(12.5, 6.8))
+    _title(
+        fig,
+        "Event-study paths make delayed tax-regime timing visible",
+        "Each point is average GDP growth relative to the event's own pre-event mean.",
+    )
+    _style_axis(ax)
+
+    series_styles = {
+        "all_events": (PALETTE["blue"], "All events"),
+        "plausibly_exogenous": (PALETTE["green"], "Plausibly exogenous events"),
+    }
+    for sample, group in work.groupby("sample"):
+        color, label = series_styles.get(str(sample), (PALETTE["orange"], str(sample)))
+        x = group["relative_year"].to_numpy(dtype=float)
+        mean = group["mean_growth_minus_pre"].to_numpy(dtype=float)
+        conf_low = group["conf_low"].to_numpy(dtype=float)
+        conf_high = group["conf_high"].to_numpy(dtype=float)
+        ax.plot(x, mean, color=color, linewidth=2.7, marker="o", label=label)
+        ax.fill_between(x, conf_low, conf_high, color=color, alpha=0.16)
+
+    ax.axhline(0, color=PALETTE["ink"], linewidth=1.0)
+    ax.axvline(0, color=PALETTE["muted"], linewidth=1.0, linestyle=(0, (4, 3)))
+    ax.set_xlabel("Years from tax-regime event")
+    ax.set_ylabel("GDP growth minus pre-event mean")
+    ax.yaxis.set_major_formatter(_percent_formatter())
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.legend(loc="best")
+    _source_note(
+        fig,
+        "Source: Maddison GDP growth and curated tax-shock catalog. "
+        "Event paths describe timing; they do not by themselves prove causality.",
+    )
+    fig.subplots_adjust(left=0.075, right=0.98, top=0.84, bottom=0.14)
+    _save(fig, output_path, dpi)
+    return output_path

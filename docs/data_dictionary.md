@@ -115,3 +115,73 @@
 | `pre_mean_growth` | Average GDP growth before the event. |
 | `event_window_mean_growth` | Average GDP growth during the event/post-event window. |
 | `event_window_minus_pre` | Difference between event-window and pre-event average growth. |
+
+## `data/models/tax_shock_catalog.csv`
+
+| Column | Meaning |
+|---|---|
+| `year` | Tax-regime event year. |
+| `event` | Federal tax-regime event name. |
+| `tax_type` | Main tax area affected. |
+| `direction` | Coarse direction: `increase`, `decrease`, `mixed`, or `base_broadening`. |
+| `shock_value` | Ordinal signed treatment proxy. Positive values denote tax increases; negative values denote tax cuts. This is not a revenue estimate. |
+| `permanence` | `temporary`, `permanent`, or `mixed`. |
+| `anticipation_years` | Years between expected/announced policy and implementation, when coded. |
+| `implementation_lag_years` | Approximate implementation delay retained for timing analysis. |
+| `narrative_classification` | Historical motivation class used to separate reform, deficit, wartime, stimulus, and mixed events. |
+| `plausibly_exogenous` | Boolean flag for the subset most relevant to causal interpretation. |
+| `description` | Short event description. |
+
+## `data/models/tax_effect_panel.csv`
+
+| Column | Meaning |
+|---|---|
+| `year` | Calendar year. |
+| GDP columns | GDP growth and fitted regime labels from the prepared GDP series. |
+| fiscal columns | Optional fiscal context ratios when available. |
+| `tax_shock_all` | Sum of signed tax-shock values in the year. |
+| `tax_shock_exogenous` | Sum of signed shocks classified as plausibly exogenous. |
+| `tax_increase_all` | Positive tax-shock component in the year. |
+| `tax_cut_all` | Absolute value of negative tax-shock component in the year. |
+| `tax_event_count` | Number of catalogued tax events in the year. |
+| `tax_exogenous_event_count` | Number of plausibly exogenous tax events in the year. |
+
+## `data/models/tax_local_projections.csv`
+
+| Column | Meaning |
+|---|---|
+| `model` | `local_projection`. |
+| `shock_column` | Tax-shock treatment series used in the regression. |
+| `horizon` | Years after the tax-regime shock. |
+| `term` | Estimated treatment term. |
+| `coefficient` | Estimated association between the tax shock and future annual GDP growth at the horizon. |
+| `std_error` | HAC standard error. |
+| `p_value` | P-value for the coefficient. |
+| `conf_low` | Lower bound of approximate 95 percent confidence interval. |
+| `conf_high` | Upper bound of approximate 95 percent confidence interval. |
+| `n_observations` | Observations used at the horizon. |
+| `r_squared` | Regression R-squared. |
+| `controls` | Included control columns. |
+| `model_note` | Causal caveat. |
+
+## `data/models/tax_distributed_lags.csv`
+
+| Column | Meaning |
+|---|---|
+| local-projection columns | Same coefficient metadata as `tax_local_projections.csv`. |
+| `term` | Current or lagged tax-shock term. |
+| `cumulative_coefficient_through_lag` | Sum of tax-shock coefficients from lag 0 through the current lag. |
+
+## `data/models/tax_dynamic_event_study.csv`
+
+| Column | Meaning |
+|---|---|
+| `relative_year` | Year relative to the tax-regime event. |
+| `n_events` | Number of events contributing to the relative-year estimate. |
+| `mean_growth` | Mean GDP growth in that event-relative year. |
+| `mean_growth_minus_pre` | Mean GDP growth minus each event's own pre-event average. |
+| `std_growth_minus_pre` | Standard deviation of event-level differences. |
+| `std_error` | Standard error of event-level differences. |
+| `conf_low` | Lower approximate 95 percent confidence bound. |
+| `conf_high` | Upper approximate 95 percent confidence bound. |
+| `sample` | `all_events` or `plausibly_exogenous`. |

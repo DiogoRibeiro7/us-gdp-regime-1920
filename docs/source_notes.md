@@ -30,6 +30,19 @@ income-tax bracket rates and tax bases. That extension should be kept separate
 from the current event-window catalog because statutory rates and effective
 fiscal receipts answer different empirical questions.
 
+## Narrative tax-shock catalog
+
+The dynamic tax-effects notebook uses a curated tax-shock catalog with signed
+ordinal treatment values and narrative classifications. The classification is
+not a substitute for a full archival narrative dataset. It is a transparent
+starting point for separating plausibly exogenous long-run reforms from
+deficit-reduction packages, wartime finance, countercyclical stimulus, and
+mixed-motivation reforms.
+
+Future versions should replace ordinal shock values with estimated revenue
+effects as a percent of GDP and should document announcement, phase-in, and
+sunset timing for each major provision.
+
 ## Practical implication
 
 Use Maddison for the full 1920-onward history. Use FRED/BEA for the modern
