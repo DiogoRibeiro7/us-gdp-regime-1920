@@ -10,6 +10,9 @@ import pandas as pd
 import requests
 
 USER_AGENT = "us-gdp-regime-research/0.1 (+https://example.local)"
+MADDISON_COUNTRY_COLUMNS = ("countrycode", "iso3", "country")
+MADDISON_GDPPC_COLUMNS = ("gdppc", "cgdppc", "rgdpnapc", "gdp_pc", "gdp per capita")
+MADDISON_POPULATION_COLUMNS = ("pop", "population")
 
 
 class DataSourceError(RuntimeError):
@@ -152,28 +155,44 @@ def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
     return work
 
 
+def _first_existing_column(columns: pd.Index, candidates: tuple[str, ...], label: str) -> str:
+    """Return the first matching candidate column or raise a source-specific error."""
+    available = set(columns)
+    for candidate in candidates:
+        if candidate in available:
+            return candidate
+    raise DataSourceError(
+        f"Could not find a Maddison {label} column. "
+        f"Expected one of {list(candidates)}; available columns are {list(columns)}."
+    )
+
+
 def _find_maddison_sheet(excel_path: Path) -> pd.DataFrame:
     """Find the Maddison data sheet with country-year observations."""
     sheets = pd.read_excel(excel_path, sheet_name=None)
 
-    required_minimum = {"year"}
-    country_candidates = {"countrycode", "country", "iso3"}
-    gdppc_candidates = {"gdppc", "cgdppc", "rgdpnapc", "gdp_pc", "gdp per capita"}
-    population_candidates = {"pop", "population"}
+    closest_sheet_columns: pd.Index | None = None
 
     for _, sheet in sheets.items():
         work = _normalise_columns(sheet)
         columns = set(work.columns)
-        has_year = required_minimum.issubset(columns)
-        has_country = bool(columns.intersection(country_candidates))
-        has_gdppc = bool(columns.intersection(gdppc_candidates))
-        has_population = bool(columns.intersection(population_candidates))
+        has_year = "year" in columns
+        has_country = bool(columns.intersection(MADDISON_COUNTRY_COLUMNS))
+        has_gdppc = bool(columns.intersection(MADDISON_GDPPC_COLUMNS))
+        has_population = bool(columns.intersection(MADDISON_POPULATION_COLUMNS))
+        if has_year and has_country:
+            closest_sheet_columns = work.columns
         if has_year and has_country and has_gdppc and has_population:
             return work
 
+    if closest_sheet_columns is not None:
+        _first_existing_column(closest_sheet_columns, MADDISON_GDPPC_COLUMNS, "GDP per capita")
+        _first_existing_column(closest_sheet_columns, MADDISON_POPULATION_COLUMNS, "population")
+
     raise DataSourceError(
         "Could not identify the Maddison country-year sheet. "
-        "Expected year, country/countrycode, GDP per capita, and population columns."
+        "Expected year, country/countrycode, GDP per capita, and population columns. "
+        f"Workbook sheets inspected: {list(sheets)}."
     )
 
 
@@ -195,14 +214,11 @@ def load_maddison_usa_series(
 
     work = _find_maddison_sheet(excel_path)
 
-    country_column = "countrycode" if "countrycode" in work.columns else "iso3"
-    if country_column not in work.columns:
-        country_column = "country"
-
-    gdppc_column = next(
-        col for col in ["gdppc", "cgdppc", "rgdpnapc", "gdp_pc", "gdp per capita"] if col in work.columns
+    country_column = _first_existing_column(work.columns, MADDISON_COUNTRY_COLUMNS, "country")
+    gdppc_column = _first_existing_column(work.columns, MADDISON_GDPPC_COLUMNS, "GDP per capita")
+    population_column = _first_existing_column(
+        work.columns, MADDISON_POPULATION_COLUMNS, "population"
     )
-    population_column = next(col for col in ["pop", "population"] if col in work.columns)
 
     country_key = country_code.upper()
     if country_column == "country":
@@ -224,7 +240,9 @@ def load_maddison_usa_series(
 
     out = out.sort_values("year").reset_index(drop=True)
     if out.empty:
-        raise DataSourceError("No Maddison observations found for the requested United States period.")
+        raise DataSourceError(
+            "No Maddison observations found for the requested United States period."
+        )
 
     out["real_gdp"] = out["real_gdp_per_capita"] * out["population"]
     out["gdp_growth"] = out["real_gdp"].pct_change() * 100.0

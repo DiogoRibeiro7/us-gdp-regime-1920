@@ -12,5 +12,6 @@ data/models/*
 !data/models/.gitkeep
 figures/*
 !figures/.gitkeep
+article_assets/*
 *.egg-info/
 .DS_Store

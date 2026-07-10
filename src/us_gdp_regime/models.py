@@ -112,6 +112,7 @@ def select_piecewise_breakpoints(
     min_segment_size: int = 5,
     max_breaks: int = 8,
     criterion: Criterion = "bic",
+    n_breaks: int | None = None,
 ) -> list[int]:
     """Select breakpoints for piecewise constant mean regression.
 
@@ -124,24 +125,36 @@ def select_piecewise_breakpoints(
     max_breaks:
         Maximum number of breakpoints. The number of segments is max_breaks + 1.
     criterion:
-        Selection criterion. `bic` is the default.
+        Selection criterion. `bic` is the default. Use `fixed` to select an
+        exact number of breaks.
+    n_breaks:
+        Exact number of breaks when `criterion` is `fixed`. If omitted,
+        `max_breaks` is used as the fixed break count.
 
     Returns
     -------
     list[int]
         End indices for each segment, including `len(values)`.
     """
-    y = np.asarray(values, dtype=float)
-    y = y[np.isfinite(y)]
-    n = len(y)
-    if n < 2 * min_segment_size:
-        raise ValueError("Not enough observations for piecewise segmentation.")
     if min_segment_size < 2:
         raise ValueError("min_segment_size must be at least 2.")
     if max_breaks < 0:
         raise ValueError("max_breaks must be non-negative.")
+    if n_breaks is not None and n_breaks < 0:
+        raise ValueError("n_breaks must be non-negative.")
 
-    max_segments = min(max_breaks + 1, n // min_segment_size)
+    y = np.asarray(values, dtype=float)
+    y = y[np.isfinite(y)]
+    n = len(y)
+    if n < min_segment_size:
+        raise ValueError("Not enough finite observations for piecewise segmentation.")
+
+    fixed_breaks = max_breaks if n_breaks is None else n_breaks
+    if criterion == "fixed" and n < (fixed_breaks + 1) * min_segment_size:
+        raise ValueError("Not enough observations for the requested fixed number of breaks.")
+
+    search_breaks = max(max_breaks, fixed_breaks) if criterion == "fixed" else max_breaks
+    max_segments = min(search_breaks + 1, n // min_segment_size)
     prefix_y = np.concatenate([[0.0], np.cumsum(y)])
     prefix_y2 = np.concatenate([[0.0], np.cumsum(y**2)])
 
@@ -167,14 +180,19 @@ def select_piecewise_breakpoints(
             dp[k, end] = best_sse
             prev[k, end] = best_start
 
-    best_k = 1
-    best_score = np.inf
-    for k in range(1, max_segments + 1):
-        if np.isfinite(dp[k, n]):
-            score = _criterion_value(dp[k, n], n=n, n_segments=k, criterion=criterion)
-            if score < best_score:
-                best_score = score
-                best_k = k
+    if criterion == "fixed":
+        best_k = fixed_breaks + 1
+        if best_k > max_segments or not np.isfinite(dp[best_k, n]):
+            raise ValueError("Requested fixed number of breaks is infeasible.")
+    else:
+        best_k = 1
+        best_score = np.inf
+        for k in range(1, max_segments + 1):
+            if np.isfinite(dp[k, n]):
+                score = _criterion_value(dp[k, n], n=n, n_segments=k, criterion=criterion)
+                if score < best_score:
+                    best_score = score
+                    best_k = k
 
     breakpoints = [n]
     end = n
@@ -235,15 +253,24 @@ def fit_growth_regimes(
     min_segment_size: int = 5,
     max_breaks: int = 8,
     criterion: Criterion = "bic",
+    n_breaks: int | None = None,
 ) -> tuple[list[PiecewiseSegment], pd.DataFrame]:
     """Fit piecewise constant growth regimes."""
-    work = df[["year", "gdp_growth"]].dropna().reset_index(drop=True)
+    required = {"year", "gdp_growth"}
+    missing = required.difference(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    work = df[["year", "gdp_growth"]].copy()
+    work["gdp_growth"] = pd.to_numeric(work["gdp_growth"], errors="coerce")
+    work = work.dropna(subset=["year", "gdp_growth"]).reset_index(drop=True)
     values = work["gdp_growth"].to_numpy(dtype=float)
     breakpoints = select_piecewise_breakpoints(
         values=values,
         min_segment_size=min_segment_size,
         max_breaks=max_breaks,
         criterion=criterion,
+        n_breaks=n_breaks,
     )
     segments = build_segments(work, breakpoints, growth_column="gdp_growth")
     segment_frame = pd.DataFrame([segment.__dict__ for segment in segments])

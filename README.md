@@ -98,9 +98,32 @@ The pipeline writes:
 data/processed/us_gdp_series.csv
 data/models/trend_regression.csv
 data/models/regime_segments.csv
+data/models/source_validation_summary.csv
+data/models/source_validation_largest_differences.csv
 figures/log_real_gdp_trend.png
 figures/gdp_growth_regimes.png
+figures/gdp_growth_regimes_annotated.png
+figures/fred_maddison_growth_comparison.png
+article_assets/regime_table.md
+article_assets/trend_summary.md
+article_assets/figure_captions.json
+article_assets/methods_box.md
 ```
+
+The FRED/BEA validation outputs are created only when the FRED CSV is available.
+
+## CLI commands
+
+```bash
+us-gdp-regimes download-data --config config/default.yaml
+us-gdp-regimes prepare-data --config config/default.yaml
+us-gdp-regimes fit-models --config config/default.yaml
+us-gdp-regimes make-figures --config config/default.yaml
+us-gdp-regimes run --config config/default.yaml
+```
+
+The CLI is intentionally thin: each command delegates to the pipeline module and
+prints the paths it generated.
 
 ## Run tests
 

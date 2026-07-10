@@ -5,7 +5,6 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-
 REQUIRED_SERIES_COLUMNS = {"year", "real_gdp", "gdp_growth"}
 
 

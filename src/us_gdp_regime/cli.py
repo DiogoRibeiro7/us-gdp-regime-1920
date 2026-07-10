@@ -3,23 +3,64 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
 import typer
 
 from us_gdp_regime.config import load_config
+from us_gdp_regime.pipeline import download_data as pipeline_download_data
+from us_gdp_regime.pipeline import fit_models as pipeline_fit_models
+from us_gdp_regime.pipeline import make_figures as pipeline_make_figures
+from us_gdp_regime.pipeline import prepare_data as pipeline_prepare_data
 from us_gdp_regime.pipeline import run_pipeline
 
 app = typer.Typer(help="United States GDP regime analysis from 1920 onward.")
+ConfigOption = Annotated[Path, typer.Option(help="YAML config path.")]
 
 
-@app.command()
-def run(config: Path = typer.Option(Path("config/default.yaml"), help="YAML config path.")) -> None:
-    """Run the complete pipeline."""
-    app_config = load_config(config)
-    outputs = run_pipeline(app_config)
+def _print_outputs(outputs: dict[str, Path]) -> None:
+    """Print generated output paths."""
     typer.echo("Generated outputs:")
     for name, path in outputs.items():
         typer.echo(f"- {name}: {path}")
+
+
+@app.command("download-data")
+def download_data(
+    config: ConfigOption = Path("config/default.yaml"),
+) -> None:
+    """Download or locate configured raw data files."""
+    _print_outputs(pipeline_download_data(load_config(config)))
+
+
+@app.command("prepare-data")
+def prepare_data(
+    config: ConfigOption = Path("config/default.yaml"),
+) -> None:
+    """Prepare the cleaned GDP series and optional source validation outputs."""
+    _print_outputs(pipeline_prepare_data(load_config(config)))
+
+
+@app.command("fit-models")
+def fit_models(
+    config: ConfigOption = Path("config/default.yaml"),
+) -> None:
+    """Fit trend and growth-regime models."""
+    _print_outputs(pipeline_fit_models(load_config(config)))
+
+
+@app.command("make-figures")
+def make_figures(
+    config: ConfigOption = Path("config/default.yaml"),
+) -> None:
+    """Create article-ready figures."""
+    _print_outputs(pipeline_make_figures(load_config(config)))
+
+
+@app.command()
+def run(config: ConfigOption = Path("config/default.yaml")) -> None:
+    """Run the complete pipeline."""
+    _print_outputs(run_pipeline(load_config(config)))
 
 
 if __name__ == "__main__":

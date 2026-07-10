@@ -73,7 +73,7 @@ class AppConfig:
     plots: PlotConfig
 
 
-def _require_mapping(value: Any, name: str) -> dict[str, Any]:
+def _require_mapping(value: object, name: str) -> dict[str, Any]:
     """Validate that a YAML section is a mapping."""
     if not isinstance(value, dict):
         raise TypeError(f"Configuration section '{name}' must be a mapping.")
@@ -139,7 +139,7 @@ def load_config(path: str | Path) -> AppConfig:
             figures_dir=Path(paths_raw["figures_dir"]),
         ),
         source=SourceConfig(
-            primary=primary,  # type: ignore[arg-type]
+            primary=primary,
             download_if_missing=bool(source_raw.get("download_if_missing", True)),
             maddison_doi=str(maddison_raw["doi"]),
             maddison_dataverse_base_url=str(maddison_raw["dataverse_base_url"]),
@@ -150,7 +150,7 @@ def load_config(path: str | Path) -> AppConfig:
         model=ModelConfig(
             min_segment_size=int(model_raw["min_segment_size"]),
             max_breaks=int(model_raw["max_breaks"]),
-            criterion=criterion,  # type: ignore[arg-type]
+            criterion=criterion,
             compare_with_fred=bool(model_raw.get("compare_with_fred", True)),
         ),
         plots=PlotConfig(dpi=int(plots_raw.get("dpi", 160))),

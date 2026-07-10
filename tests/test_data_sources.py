@@ -3,8 +3,13 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 
-from us_gdp_regime.data_sources import load_fred_annual_real_gdp, load_maddison_usa_series
+from us_gdp_regime.data_sources import (
+    DataSourceError,
+    load_fred_annual_real_gdp,
+    load_maddison_usa_series,
+)
 
 
 def test_load_maddison_usa_series_from_synthetic_excel(tmp_path: Path) -> None:
@@ -26,6 +31,47 @@ def test_load_maddison_usa_series_from_synthetic_excel(tmp_path: Path) -> None:
     assert list(out["year"]) == [1920, 1921, 1922]
     assert out.loc[0, "real_gdp"] == 1000.0
     assert round(float(out.loc[1, "gdp_growth"]), 3) == 10.0
+    assert list(out.columns) == [
+        "year",
+        "real_gdp",
+        "gdp_growth",
+        "real_gdp_per_capita",
+        "population",
+        "source",
+    ]
+
+
+def test_load_maddison_usa_series_accepts_mixed_case_columns(tmp_path: Path) -> None:
+    excel_path = tmp_path / "maddison_mixed_case.xlsx"
+    pd.DataFrame(
+        {
+            "CountryCode": ["USA", "USA"],
+            "Year": [1920, 1921],
+            "GDPPC": [10.0, 12.0],
+            "POP": [100.0, 100.0],
+        }
+    ).to_excel(excel_path, index=False)
+
+    out = load_maddison_usa_series(excel_path, start_year=1920)
+
+    assert list(out["year"]) == [1920, 1921]
+    assert out.loc[1, "real_gdp"] == 1200.0
+
+
+def test_load_maddison_usa_series_rejects_missing_gdp_or_population(
+    tmp_path: Path,
+) -> None:
+    excel_path = tmp_path / "maddison_missing_columns.xlsx"
+    pd.DataFrame(
+        {
+            "countrycode": ["USA"],
+            "year": [1920],
+            "gdppc": [10.0],
+        }
+    ).to_excel(excel_path, index=False)
+
+    with pytest.raises(DataSourceError, match="population"):
+        load_maddison_usa_series(excel_path, start_year=1920)
 
 
 def test_load_fred_annual_real_gdp_from_synthetic_csv(tmp_path: Path) -> None:

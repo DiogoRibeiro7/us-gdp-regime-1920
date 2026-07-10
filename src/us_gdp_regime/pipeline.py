@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from us_gdp_regime.article_exports import write_article_assets
 from us_gdp_regime.config import AppConfig
 from us_gdp_regime.data_sources import (
     DataSourceError,
@@ -16,8 +17,17 @@ from us_gdp_regime.data_sources import (
     load_maddison_usa_series,
 )
 from us_gdp_regime.models import assign_segment_labels, fit_growth_regimes, fit_log_trend
-from us_gdp_regime.plotting import plot_growth_regimes, plot_log_gdp_trend
-from us_gdp_regime.transform import compare_overlapping_growth, validate_gdp_series
+from us_gdp_regime.plotting import (
+    plot_growth_regimes,
+    plot_growth_regimes_annotated,
+    plot_log_gdp_trend,
+)
+from us_gdp_regime.source_validation import (
+    build_growth_comparison,
+    plot_growth_comparison,
+    write_source_validation_outputs,
+)
+from us_gdp_regime.transform import validate_gdp_series
 
 
 def _ensure_directories(config: AppConfig) -> None:
@@ -117,16 +127,135 @@ def _maybe_build_fred_validation(config: AppConfig, primary: pd.DataFrame) -> pd
         series_id=config.source.fred_series_id,
     )
     fred = validate_gdp_series(fred)
-    return compare_overlapping_growth(primary, fred, primary_name="maddison", validation_name="fred")
+    return build_growth_comparison(primary, fred)
+
+
+def download_data(config: AppConfig) -> dict[str, Path]:
+    """Download configured raw source files when missing.
+
+    Existing local files are reused. Network calls only occur when
+    `source.download_if_missing` is enabled and a source file is missing.
+    """
+    _ensure_directories(config)
+    outputs: dict[str, Path] = {}
+
+    if config.source.primary == "maddison":
+        outputs["maddison_excel"] = _resolve_maddison_excel(config)
+
+    fred_path = config.paths.raw_dir / f"fred_{config.source.fred_series_id}.csv"
+    if config.model.compare_with_fred or config.source.primary == "fred":
+        if not fred_path.exists() and config.source.download_if_missing:
+            fred_path = download_fred_csv(
+                csv_url=config.source.fred_csv_url,
+                raw_dir=config.paths.raw_dir,
+                series_id=config.source.fred_series_id,
+            )
+        if fred_path.exists():
+            outputs["fred_csv"] = fred_path
+    return outputs
+
+
+def prepare_data(config: AppConfig) -> dict[str, Path]:
+    """Load, validate, and save the prepared GDP series."""
+    _ensure_directories(config)
+    series = validate_gdp_series(_load_primary_series(config))
+
+    processed_path = config.paths.processed_dir / "us_gdp_series.csv"
+    series.to_csv(processed_path, index=False)
+
+    outputs = {"series": processed_path}
+    comparison = _maybe_build_fred_validation(config, series)
+    if comparison is not None:
+        outputs.update(write_source_validation_outputs(comparison, config.paths.models_dir))
+        comparison_figure_path = config.paths.figures_dir / "fred_maddison_growth_comparison.png"
+        plot_growth_comparison(comparison, comparison_figure_path, dpi=config.plots.dpi)
+        outputs["fred_comparison_figure"] = comparison_figure_path
+    return outputs
+
+
+def _load_prepared_series(config: AppConfig) -> pd.DataFrame:
+    """Load the prepared series from disk."""
+    processed_path = config.paths.processed_dir / "us_gdp_series.csv"
+    if not processed_path.exists():
+        raise FileNotFoundError(f"Prepared GDP series not found: {processed_path}")
+    return validate_gdp_series(pd.read_csv(processed_path))
+
+
+def fit_models(config: AppConfig, series: pd.DataFrame | None = None) -> dict[str, Path]:
+    """Fit trend and regime models and save model outputs."""
+    _ensure_directories(config)
+    work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
+    trend_result, _ = fit_log_trend(work)
+    _, segment_frame = fit_growth_regimes(
+        work,
+        min_segment_size=config.model.min_segment_size,
+        max_breaks=config.model.max_breaks,
+        criterion=config.model.criterion,
+    )
+
+    trend_path = config.paths.models_dir / "trend_regression.csv"
+    segment_path = config.paths.models_dir / "regime_segments.csv"
+    pd.DataFrame([trend_result.__dict__]).to_csv(trend_path, index=False)
+    segment_frame.to_csv(segment_path, index=False)
+    return {"trend": trend_path, "segments": segment_path}
+
+
+def make_figures(config: AppConfig, series: pd.DataFrame | None = None) -> dict[str, Path]:
+    """Create figures from the prepared series and configured model settings."""
+    _ensure_directories(config)
+    work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
+    trend_result, trend_frame = fit_log_trend(work)
+    segments, _ = fit_growth_regimes(
+        work,
+        min_segment_size=config.model.min_segment_size,
+        max_breaks=config.model.max_breaks,
+        criterion=config.model.criterion,
+    )
+
+    trend_figure_path = config.paths.figures_dir / "log_real_gdp_trend.png"
+    regimes_figure_path = config.paths.figures_dir / "gdp_growth_regimes.png"
+    annotated_regimes_figure_path = config.paths.figures_dir / "gdp_growth_regimes_annotated.png"
+    plot_log_gdp_trend(
+        series=work,
+        trend_frame=trend_frame,
+        trend_result=trend_result,
+        output_path=trend_figure_path,
+        dpi=config.plots.dpi,
+    )
+    plot_growth_regimes(
+        series=work,
+        segments=segments,
+        output_path=regimes_figure_path,
+        dpi=config.plots.dpi,
+    )
+    plot_growth_regimes_annotated(
+        series=work,
+        segments=segments,
+        output_path=annotated_regimes_figure_path,
+        dpi=config.plots.dpi,
+    )
+    return {
+        "trend_figure": trend_figure_path,
+        "regimes_figure": regimes_figure_path,
+        "annotated_regimes_figure": annotated_regimes_figure_path,
+    }
+
+
+def export_article_assets(config: AppConfig) -> dict[str, Path]:
+    """Export article tables, captions, and methods text from model outputs."""
+    trend_path = config.paths.models_dir / "trend_regression.csv"
+    segment_path = config.paths.models_dir / "regime_segments.csv"
+    if not trend_path.exists() or not segment_path.exists():
+        raise FileNotFoundError("Trend and regime model outputs must exist before article export.")
+    return write_article_assets(
+        regime_segments=pd.read_csv(segment_path),
+        trend_summary=pd.read_csv(trend_path),
+        output_dir=Path("article_assets"),
+    )
 
 
 def run_pipeline(config: AppConfig) -> dict[str, Path]:
     """Run the complete GDP regime pipeline.
-
-    Parameters
-    ----------
-    config:
-        Application configuration.
 
     Returns
     -------
@@ -136,51 +265,18 @@ def run_pipeline(config: AppConfig) -> dict[str, Path]:
     _ensure_directories(config)
 
     series = validate_gdp_series(_load_primary_series(config))
-    trend_result, trend_frame = fit_log_trend(series)
-    segments, segment_frame = fit_growth_regimes(
+    data_outputs = prepare_data(config)
+    model_outputs = fit_models(config, series=series)
+    figure_outputs = make_figures(config, series=series)
+    article_outputs = export_article_assets(config)
+
+    segments, _ = fit_growth_regimes(
         series,
         min_segment_size=config.model.min_segment_size,
         max_breaks=config.model.max_breaks,
         criterion=config.model.criterion,
     )
     labelled_series = assign_segment_labels(series, segments)
-
     processed_path = config.paths.processed_dir / "us_gdp_series.csv"
-    trend_path = config.paths.models_dir / "trend_regression.csv"
-    segment_path = config.paths.models_dir / "regime_segments.csv"
-    comparison_path = config.paths.models_dir / "fred_maddison_growth_comparison.csv"
-    trend_figure_path = config.paths.figures_dir / "log_real_gdp_trend.png"
-    regimes_figure_path = config.paths.figures_dir / "gdp_growth_regimes.png"
-
     labelled_series.to_csv(processed_path, index=False)
-    pd.DataFrame([trend_result.__dict__]).to_csv(trend_path, index=False)
-    segment_frame.to_csv(segment_path, index=False)
-
-    comparison = _maybe_build_fred_validation(config, series)
-    if comparison is not None:
-        comparison.to_csv(comparison_path, index=False)
-
-    plot_log_gdp_trend(
-        series=series,
-        trend_frame=trend_frame,
-        trend_result=trend_result,
-        output_path=trend_figure_path,
-        dpi=config.plots.dpi,
-    )
-    plot_growth_regimes(
-        series=series,
-        segments=segments,
-        output_path=regimes_figure_path,
-        dpi=config.plots.dpi,
-    )
-
-    outputs = {
-        "series": processed_path,
-        "trend": trend_path,
-        "segments": segment_path,
-        "trend_figure": trend_figure_path,
-        "regimes_figure": regimes_figure_path,
-    }
-    if comparison is not None:
-        outputs["fred_comparison"] = comparison_path
-    return outputs
+    return data_outputs | model_outputs | figure_outputs | article_outputs
