@@ -1,0 +1,24 @@
+{
+  "title": "Growth Regimes in the United States since 1920: Structural Breaks, Fiscal Structure, and the Productivity-Pay Divergence",
+  "description": "<p>A reproducible empirical analysis of long-run United States real GDP from 1920 onward. Annual growth is characterised as a sequence of statistically identified regimes rather than a single trend. Log GDP is shown to be empirically indistinguishable from a unit-root process while its growth rate is stationary; regimes are detected by dynamic-programming segmentation with a recursive within-segment refinement, and their uncertainty is quantified with parametric-bootstrap structural-break tests, break-date confidence intervals, and a robustness grid. The analysis integrates federal fiscal structure, the dynamic response of growth to narrative tax-regime shocks estimated by local projections, and the divergence between real GDP per capita and real median earnings. Every reported statistic is generated programmatically from the model outputs.</p>",
+  "upload_type": "software",
+  "access_right": "open",
+  "license": "cc-by-4.0",
+  "creators": [
+    {
+      "name": "Ribeiro, Diogo"
+    }
+  ],
+  "keywords": [
+    "United States GDP",
+    "growth regimes",
+    "structural breaks",
+    "unit roots",
+    "local projections",
+    "fiscal policy",
+    "real wages",
+    "reproducible research",
+    "econometrics",
+    "Bai-Perron"
+  ]
+}

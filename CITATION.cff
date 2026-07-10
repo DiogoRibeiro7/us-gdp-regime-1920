@@ -1,0 +1,36 @@
+cff-version: 1.2.0
+message: "If you use this software or its results, please cite it as below."
+title: >-
+  Growth Regimes in the United States since 1920: Structural Breaks,
+  Fiscal Structure, and the Productivity-Pay Divergence
+abstract: >-
+  A reproducible empirical analysis of long-run United States real GDP from 1920
+  onward. The workflow characterises annual growth as a sequence of statistically
+  identified regimes rather than a single trend: it establishes that log GDP is
+  empirically indistinguishable from a unit-root process while growth is
+  stationary, detects regimes by dynamic-programming segmentation with a recursive
+  within-segment refinement, and quantifies their uncertainty with
+  parametric-bootstrap structural-break tests, break-date confidence intervals,
+  and a robustness grid. It integrates federal fiscal structure, the dynamic
+  response of growth to narrative tax-regime shocks (local projections), and the
+  divergence between real GDP per capita and real median earnings. Every reported
+  statistic is generated programmatically from the model outputs.
+type: software
+authors:
+  - given-names: Diogo
+    family-names: Ribeiro
+    email: hansolo.dj@gmail.com
+    # orcid: "https://orcid.org/0000-0000-0000-0000"  # add your ORCID if you have one
+version: 1.0.0
+date-released: "2026-07-10"
+license: CC-BY-4.0
+repository-code: "https://github.com/DiogoRibeiro7/us-gdp-regime-1920"
+keywords:
+  - United States GDP
+  - growth regimes
+  - structural breaks
+  - unit roots
+  - local projections
+  - fiscal policy
+  - real wages
+  - reproducible research
