@@ -113,8 +113,18 @@ The pipeline writes:
 data/processed/us_gdp_series.csv
 data/models/trend_regression.csv
 data/models/regime_segments.csv
+data/models/regime_segments_global.csv
+data/models/unit_root_tests.csv
+data/models/segmentation_selection.csv
+data/models/break_significance_tests.csv
+data/models/break_date_confidence_intervals.csv
+data/models/postwar_decomposition.csv
+data/models/postwar_break_tests.csv
+data/models/regime_robustness.csv
+data/models/recurring_break_years.csv
 data/models/source_validation_summary.csv
 data/models/source_validation_largest_differences.csv
+data/models/report_numbers.json
 figures/log_real_gdp_trend.png
 figures/gdp_growth_regimes.png
 figures/gdp_growth_regimes_annotated.png
@@ -123,6 +133,7 @@ article_assets/regime_table.md
 article_assets/trend_summary.md
 article_assets/figure_captions.json
 article_assets/methods_box.md
+reports/generated_numbers.tex
 ```
 
 The FRED/BEA validation outputs are created only when the FRED CSV is available.

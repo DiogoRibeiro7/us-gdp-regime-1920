@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 
 import pandas as pd
@@ -64,6 +65,12 @@ from us_gdp_regime.plotting import (
     plot_wage_gdp_gap,
 )
 from us_gdp_regime.report_numbers import write_report_numbers
+from us_gdp_regime.robustness import (
+    run_criterion_sensitivity,
+    run_exclusion_sensitivity,
+    run_min_segment_sensitivity,
+    summarize_recurring_breaks,
+)
 from us_gdp_regime.source_validation import (
     build_growth_comparison,
     plot_growth_comparison,
@@ -284,7 +291,71 @@ def fit_models(config: AppConfig, series: pd.DataFrame | None = None) -> dict[st
         _write_inference_outputs(config, work, n_selected_breaks=len(global_segments) - 1)
     )
     outputs.update(_write_postwar_decomposition(config, work, global_segments))
+    outputs.update(_write_robustness_outputs(config, work))
     return outputs
+
+
+def _write_robustness_outputs(config: AppConfig, work: pd.DataFrame) -> dict[str, Path]:
+    """Run and persist the regime robustness scenarios.
+
+    The break years are re-estimated across a grid of minimum segment sizes,
+    across the BIC and AIC criteria, and after excluding the 1941--1945 wartime
+    window. Break years that recur across these choices are the stable structural
+    features; those that appear only under one setting are fragile.
+    """
+    models_dir = config.paths.models_dir
+    n_growth = int(work["gdp_growth"].dropna().shape[0])
+    segment_sizes = tuple(size for size in (4, 5, 7, 10) if size <= n_growth)
+
+    frames: list[pd.DataFrame] = []
+
+    def _collect(builder: Callable[[], pd.DataFrame]) -> None:
+        try:
+            frame = builder()
+        except ValueError:
+            return  # Scenario infeasible for this sample (e.g. too few observations).
+        if not frame.empty:
+            frames.append(frame)
+
+    if segment_sizes:
+        _collect(
+            lambda: run_min_segment_sensitivity(
+                work,
+                min_segment_sizes=segment_sizes,
+                criterion=config.model.criterion,
+                max_breaks=config.model.max_breaks,
+            )
+        )
+    _collect(
+        lambda: run_criterion_sensitivity(
+            work,
+            criteria=("bic", "aic"),
+            min_segment_size=config.model.min_segment_size,
+            max_breaks=config.model.max_breaks,
+        )
+    )
+    _collect(
+        lambda: run_exclusion_sensitivity(
+            work,
+            exclusion_windows=((1941, 1945),),
+            criterion=config.model.criterion,
+            min_segment_size=config.model.min_segment_size,
+            max_breaks=config.model.max_breaks,
+        )
+    )
+    if not frames:
+        return {}
+    combined = pd.concat(frames, ignore_index=True)
+    recurring = summarize_recurring_breaks(combined, tolerance=2)
+
+    robustness_path = models_dir / "regime_robustness.csv"
+    recurring_path = models_dir / "recurring_break_years.csv"
+    combined.to_csv(robustness_path, index=False)
+    recurring.to_csv(recurring_path, index=False)
+    return {
+        "regime_robustness": robustness_path,
+        "recurring_break_years": recurring_path,
+    }
 
 
 def _write_postwar_decomposition(

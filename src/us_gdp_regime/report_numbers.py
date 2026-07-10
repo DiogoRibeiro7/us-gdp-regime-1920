@@ -62,6 +62,18 @@ def _fmt_p_math(value: float) -> str:
     return f"= {p:.3f}"
 
 
+def _sig_stars(p_value: float) -> str:
+    """Return conventional significance stars for a p-value."""
+    p = float(p_value)
+    if p < 0.01:
+        return "$^{***}$"
+    if p < 0.05:
+        return "$^{**}$"
+    if p < 0.10:
+        return "$^{*}$"
+    return ""
+
+
 def _latex_table_body(rows: list[str]) -> str:
     """Build a generated tabular body with the closing booktabs rule in-file."""
     return "\n".join([*rows, r"    \bottomrule"])
@@ -78,18 +90,34 @@ def _read(models_dir: Path, name: str) -> pd.DataFrame | None:
         return None
 
 
-def _add_trend(models_dir: Path, numbers: dict[str, str]) -> None:
+def _add_trend(models_dir: Path, numbers: dict[str, str], tables: dict[str, str]) -> None:
     df = _read(models_dir, "trend_regression")
     if df is None or df.empty:
         return
     row = df.iloc[0]
     numbers["trend_growth"] = _fmt(row["annualised_growth_rate"], 2)
     numbers["trend_r_squared"] = _fmt(row["r_squared"], 3)
-    if "slope_t_statistic" in row:
-        numbers["trend_hac_t"] = _fmt(row["slope_t_statistic"], 1)
-        numbers["trend_hac_se"] = _fmt(row["slope_std_error"], 4)
-        numbers["trend_nw_lags"] = str(int(row["hac_lags"]))
-        numbers["trend_nobs"] = str(int(row["n_observations"]))
+    numbers["trend_slope"] = _fmt(row["slope"], 4)
+    if "slope_t_statistic" not in row:
+        return
+    numbers["trend_hac_t"] = _fmt(row["slope_t_statistic"], 1)
+    numbers["trend_hac_se"] = _fmt(row["slope_std_error"], 4)
+    numbers["trend_nw_lags"] = str(int(row["hac_lags"]))
+    numbers["trend_nobs"] = str(int(row["n_observations"]))
+    slope = _fmt(row["slope"], 4)
+    se = _fmt(row["slope_std_error"], 4)
+    growth = _fmt(row["annualised_growth_rate"], 2)
+    tables["trend_reg_table"] = _latex_table_body(
+        [
+            f"    Log-trend slope $\\hat\\beta$ (per year) & {slope} \\\\",
+            f"    \\quad Newey--West standard error & ({se}) \\\\",
+            f"    \\quad HAC $t$-statistic & {_fmt(row['slope_t_statistic'], 1)} \\\\",
+            f"    Implied annual growth $e^{{\\hat\\beta}}-1$ (\\%) & {growth} \\\\",
+            f"    $R^2$ & {_fmt(row['r_squared'], 3)} \\\\",
+            f"    Observations & {int(row['n_observations'])} \\\\",
+            f"    Newey--West lags & {int(row['hac_lags'])} \\\\",
+        ]
+    )
 
 
 def _add_regimes(models_dir: Path, numbers: dict[str, str], tables: dict[str, str]) -> None:
@@ -117,10 +145,15 @@ def _add_regimes(models_dir: Path, numbers: dict[str, str], tables: dict[str, st
     tables["regime_table"] = _latex_table_body(rows)
 
 
-def _add_unit_root(models_dir: Path, numbers: dict[str, str]) -> None:
+def _add_unit_root(models_dir: Path, numbers: dict[str, str], tables: dict[str, str]) -> None:
     df = _read(models_dir, "unit_root_tests")
     if df is None or df.empty:
         return
+    labels = {
+        "log_real_gdp": "Log real GDP level",
+        "gdp_growth": "Real GDP growth",
+    }
+    rows = []
     for series, prefix in [("log_real_gdp", "level"), ("gdp_growth", "growth")]:
         match = df.loc[df["series"].eq(series)]
         if match.empty:
@@ -130,6 +163,13 @@ def _add_unit_root(models_dir: Path, numbers: dict[str, str]) -> None:
         numbers[f"{prefix}_adf_p"] = _fmt_p_math(row["adf_pvalue"])
         numbers[f"{prefix}_kpss_stat"] = _fmt(row["kpss_stat"], 3)
         numbers[f"{prefix}_kpss_p"] = _fmt_p_math(row["kpss_pvalue"])
+        rows.append(
+            f"    {labels[series]} & {row['adf_regression']} & "
+            f"{_fmt(row['adf_stat'], 2)} & {_fmt_p(row['adf_pvalue'])} & "
+            f"{_fmt(row['kpss_stat'], 3)} & {_fmt_p(row['kpss_pvalue'])} \\\\"
+        )
+    if rows:
+        tables["unit_root_table"] = _latex_table_body(rows)
 
 
 def _add_break_tests(models_dir: Path, numbers: dict[str, str], tables: dict[str, str]) -> None:
@@ -211,17 +251,75 @@ def _add_postwar(models_dir: Path, numbers: dict[str, str], tables: dict[str, st
             numbers["postwar_break_p"] = _fmt_p_math(first.iloc[0]["bootstrap_p_value"])
 
 
-def _add_source_validation(models_dir: Path, numbers: dict[str, str]) -> None:
-    df = _read(models_dir, "source_validation_summary")
+def _add_robustness(models_dir: Path, numbers: dict[str, str], tables: dict[str, str]) -> None:
+    scenarios = _read(models_dir, "regime_robustness")
+    if scenarios is not None and not scenarios.empty:
+        numbers["robustness_n_scenarios"] = str(int(scenarios["scenario_id"].nunique()))
+
+    recurring = _read(models_dir, "recurring_break_years")
+    if recurring is None or recurring.empty:
+        return
+    total = numbers.get("robustness_n_scenarios", "")
+    rows = []
+    for _, row in recurring.sort_values("representative_break_year").iterrows():
+        low, high = int(row["min_break_year"]), int(row["max_break_year"])
+        window = f"{low}" if low == high else f"{low}--{high}"
+        count = f"{int(row['n_scenarios'])}/{total}" if total else str(int(row["n_scenarios"]))
+        rows.append(
+            f"    {int(row['representative_break_year'])} & {window} & {count} \\\\"
+        )
+    tables["robustness_table"] = _latex_table_body(rows)
+    most = recurring.loc[recurring["n_scenarios"].idxmax()]
+    numbers["most_robust_break_year"] = str(int(most["representative_break_year"]))
+    numbers["most_robust_break_scenarios"] = str(int(most["n_scenarios"]))
+
+
+def _add_local_projections(models_dir: Path, tables: dict[str, str]) -> None:
+    df = _read(models_dir, "tax_local_projections")
     if df is None or df.empty:
         return
-    row = df.iloc[0]
-    numbers["overlap_years"] = str(int(row["n_overlap_years"]))
-    numbers["overlap_start"] = str(int(row["start_year"]))
-    numbers["overlap_end"] = str(int(row["end_year"]))
-    numbers["growth_correlation"] = _fmt(row["growth_correlation"], 3)
-    numbers["growth_mad"] = _fmt(row["mean_absolute_difference"], 2)
-    numbers["growth_rmse"] = _fmt(row["root_mean_squared_difference"], 2)
+
+    def _cells(sample: str, horizon: int) -> tuple[str, str]:
+        match = df.loc[df["shock_column"].eq(sample) & df["horizon"].eq(horizon)]
+        if match.empty:
+            return "", ""
+        row = match.iloc[0]
+        coef = f"{_fmt(row['coefficient'], 2)}{_sig_stars(row['p_value'])}"
+        return coef, f"({_fmt(row['std_error'], 2)})"
+
+    rows = []
+    for horizon in sorted(df["horizon"].unique()):
+        all_coef, all_se = _cells("tax_shock_all", int(horizon))
+        exo_coef, exo_se = _cells("tax_shock_exogenous", int(horizon))
+        rows.append(f"    {int(horizon)} & {all_coef} & {all_se} & {exo_coef} & {exo_se} \\\\")
+    if rows:
+        tables["lp_table"] = _latex_table_body(rows)
+
+
+def _add_source_validation(
+    models_dir: Path,
+    numbers: dict[str, str],
+    tables: dict[str, str],
+) -> None:
+    df = _read(models_dir, "source_validation_summary")
+    if df is not None and not df.empty:
+        row = df.iloc[0]
+        numbers["overlap_years"] = str(int(row["n_overlap_years"]))
+        numbers["overlap_start"] = str(int(row["start_year"]))
+        numbers["overlap_end"] = str(int(row["end_year"]))
+        numbers["growth_correlation"] = _fmt(row["growth_correlation"], 3)
+        numbers["growth_mad"] = _fmt(row["mean_absolute_difference"], 2)
+        numbers["growth_rmse"] = _fmt(row["root_mean_squared_difference"], 2)
+
+    largest = _read(models_dir, "source_validation_largest_differences")
+    if largest is not None and not largest.empty:
+        rows = []
+        for _, row in largest.head(10).iterrows():
+            rows.append(
+                f"    {int(row['year'])} & {_fmt(row['growth_maddison'], 2)} & "
+                f"{_fmt(row['growth_fred'], 2)} & {_fmt(row['growth_difference'], 2)} \\\\"
+            )
+        tables["source_diff_table"] = _latex_table_body(rows)
 
 
 def _add_fiscal(models_dir: Path, numbers: dict[str, str]) -> None:
@@ -296,13 +394,15 @@ def build_report_numbers(models_dir: Path) -> tuple[dict[str, str], dict[str, st
     """
     numbers: dict[str, str] = {}
     tables: dict[str, str] = {}
-    _add_trend(models_dir, numbers)
+    _add_trend(models_dir, numbers, tables)
     _add_regimes(models_dir, numbers, tables)
-    _add_unit_root(models_dir, numbers)
+    _add_unit_root(models_dir, numbers, tables)
     _add_break_tests(models_dir, numbers, tables)
     _add_break_cis(models_dir, numbers, tables)
     _add_postwar(models_dir, numbers, tables)
-    _add_source_validation(models_dir, numbers)
+    _add_robustness(models_dir, numbers, tables)
+    _add_local_projections(models_dir, tables)
+    _add_source_validation(models_dir, numbers, tables)
     _add_fiscal(models_dir, numbers)
     _add_distributional(models_dir, numbers)
     return numbers, tables
