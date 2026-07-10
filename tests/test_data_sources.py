@@ -8,6 +8,7 @@ import pytest
 from us_gdp_regime.data_sources import (
     DataSourceError,
     load_fred_annual_real_gdp,
+    load_fred_annual_series,
     load_maddison_usa_series,
 )
 
@@ -102,3 +103,24 @@ def test_load_fred_accepts_observation_date_header(tmp_path: Path) -> None:
 
     assert list(out["year"]) == [1929, 1930]
     assert round(float(out.loc[1, "gdp_growth"]), 3) == 5.0
+
+
+def test_load_fred_annual_series_generic_loader(tmp_path: Path) -> None:
+    csv_path = tmp_path / "fred_FYFRGDA188S.csv"
+    pd.DataFrame(
+        {
+            "observation_date": ["1929-01-01", "1930-01-01", "1931-01-01"],
+            "FYFRGDA188S": [10.0, 10.5, 11.0],
+        }
+    ).to_csv(csv_path, index=False)
+
+    out = load_fred_annual_series(
+        csv_path=csv_path,
+        series_id="FYFRGDA188S",
+        value_column="receipts_gdp",
+        start_year=1930,
+    )
+
+    assert list(out["year"]) == [1930, 1931]
+    assert list(out["receipts_gdp"]) == [10.5, 11.0]
+    assert out.loc[0, "source"] == "fred_FYFRGDA188S"

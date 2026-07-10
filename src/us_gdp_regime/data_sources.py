@@ -148,6 +148,12 @@ def download_fred_csv(csv_url: str, raw_dir: Path, series_id: str = "GDPCA") -> 
     return _download_binary(csv_url, output_path)
 
 
+def download_fred_series_csv(series_id: str, raw_dir: Path) -> Path:
+    """Download a FRED series through the public graph CSV endpoint."""
+    csv_url = f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={series_id}"
+    return download_fred_csv(csv_url=csv_url, raw_dir=raw_dir, series_id=series_id)
+
+
 def _normalise_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Return a copy with lowercase stripped column names."""
     work = df.copy()
@@ -282,3 +288,42 @@ def load_fred_annual_real_gdp(
     out["gdp_growth"] = out["real_gdp"].pct_change() * 100.0
     out["source"] = f"fred_{series_id}"
     return out[["year", "real_gdp", "gdp_growth", "source"]]
+
+
+def load_fred_annual_series(
+    csv_path: Path,
+    series_id: str,
+    value_column: str,
+    start_year: int | None = None,
+    end_year: int | None = None,
+) -> pd.DataFrame:
+    """Load a generic annual FRED series from a graph CSV file.
+
+    The loader accepts both `DATE` and `observation_date` headers, matching the
+    variants commonly returned by FRED and pandas-datareader style exports.
+    """
+    if not csv_path.exists():
+        raise FileNotFoundError(f"FRED CSV file not found: {csv_path}")
+
+    work = pd.read_csv(csv_path)
+    column_lookup = {str(column).strip().lower(): column for column in work.columns}
+    date_column = column_lookup.get("date", column_lookup.get("observation_date"))
+    series_column = column_lookup.get(series_id.lower())
+    if date_column is None or series_column is None:
+        raise DataSourceError(
+            f"Expected a DATE/observation_date column and {series_id} in FRED CSV. "
+            f"Available columns are {list(work.columns)}."
+        )
+
+    out = work[[date_column, series_column]].copy()
+    out = out.rename(columns={series_column: value_column})
+    out["year"] = pd.to_datetime(out[date_column]).dt.year
+    out[value_column] = pd.to_numeric(out[value_column], errors="coerce")
+    out = out.dropna(subset=[value_column])
+    if start_year is not None:
+        out = out.loc[out["year"] >= start_year]
+    if end_year is not None:
+        out = out.loc[out["year"] <= end_year]
+    out = out.sort_values("year").reset_index(drop=True)
+    out["source"] = f"fred_{series_id}"
+    return out[["year", value_column, "source"]]

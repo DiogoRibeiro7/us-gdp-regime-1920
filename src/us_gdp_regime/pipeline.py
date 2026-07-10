@@ -11,16 +11,29 @@ from us_gdp_regime.config import AppConfig
 from us_gdp_regime.data_sources import (
     DataSourceError,
     download_fred_csv,
+    download_fred_series_csv,
     download_maddison_excel,
     download_maddison_zip_fallback,
     load_fred_annual_real_gdp,
+    load_fred_annual_series,
     load_maddison_usa_series,
+)
+from us_gdp_regime.fiscal import (
+    FISCAL_FRED_SERIES,
+    build_tax_event_frame,
+    fit_fiscal_growth_association,
+    merge_fiscal_series,
+    merge_growth_and_fiscal,
+    summarize_fiscal_growth_correlations,
+    tax_event_study,
 )
 from us_gdp_regime.models import assign_segment_labels, fit_growth_regimes, fit_log_trend
 from us_gdp_regime.plotting import (
+    plot_fiscal_context,
     plot_growth_regimes,
     plot_growth_regimes_annotated,
     plot_log_gdp_trend,
+    plot_tax_event_growth_windows,
 )
 from us_gdp_regime.source_validation import (
     build_growth_comparison,
@@ -239,6 +252,81 @@ def make_figures(config: AppConfig, series: pd.DataFrame | None = None) -> dict[
         "regimes_figure": regimes_figure_path,
         "annotated_regimes_figure": annotated_regimes_figure_path,
     }
+
+
+def make_fiscal_context(config: AppConfig, series: pd.DataFrame | None = None) -> dict[str, Path]:
+    """Build the optional fiscal/debt/tax context analysis."""
+    _ensure_directories(config)
+    work = validate_gdp_series(series) if series is not None else _load_prepared_series(config)
+    segments, _ = fit_growth_regimes(
+        work,
+        min_segment_size=config.model.min_segment_size,
+        max_breaks=config.model.max_breaks,
+        criterion=config.model.criterion,
+    )
+    labelled_series = assign_segment_labels(work, segments)
+
+    fiscal_frames: dict[str, pd.DataFrame] = {}
+    for variable, series_id in FISCAL_FRED_SERIES.items():
+        csv_path = config.paths.raw_dir / f"fred_{series_id}.csv"
+        if not csv_path.exists() and config.source.download_if_missing:
+            csv_path = download_fred_series_csv(series_id=series_id, raw_dir=config.paths.raw_dir)
+        if csv_path.exists():
+            fiscal_frames[variable] = load_fred_annual_series(
+                csv_path=csv_path,
+                series_id=series_id,
+                value_column=variable,
+                start_year=config.project.start_year,
+                end_year=config.project.end_year,
+            )
+
+    if not fiscal_frames:
+        raise FileNotFoundError(
+            "No fiscal FRED CSV files are available. Enable source.download_if_missing "
+            "or place the configured FRED fiscal CSVs in data/raw."
+        )
+
+    fiscal_panel = merge_fiscal_series(fiscal_frames)
+    panel = merge_growth_and_fiscal(labelled_series, fiscal_panel)
+    correlations = summarize_fiscal_growth_correlations(panel)
+    tax_events = build_tax_event_frame()
+    event_windows = tax_event_study(panel=labelled_series, events=tax_events)
+
+    fiscal_context_path = config.paths.models_dir / "fiscal_context.csv"
+    correlations_path = config.paths.models_dir / "fiscal_growth_correlations.csv"
+    tax_events_path = config.paths.models_dir / "tax_regime_events.csv"
+    event_windows_path = config.paths.models_dir / "tax_event_growth_windows.csv"
+    association_path = config.paths.models_dir / "fiscal_growth_association.csv"
+    fiscal_figure_path = config.paths.figures_dir / "fiscal_context.png"
+    tax_figure_path = config.paths.figures_dir / "tax_event_growth_windows.png"
+
+    fiscal_panel.to_csv(config.paths.models_dir / "fiscal_ratios.csv", index=False)
+    panel.to_csv(fiscal_context_path, index=False)
+    correlations.to_csv(correlations_path, index=False)
+    tax_events.to_csv(tax_events_path, index=False)
+    event_windows.to_csv(event_windows_path, index=False)
+
+    outputs = {
+        "fiscal_ratios": config.paths.models_dir / "fiscal_ratios.csv",
+        "fiscal_context": fiscal_context_path,
+        "fiscal_growth_correlations": correlations_path,
+        "tax_regime_events": tax_events_path,
+        "tax_event_growth_windows": event_windows_path,
+    }
+
+    try:
+        association = fit_fiscal_growth_association(panel)
+    except ValueError:
+        association = pd.DataFrame()
+    if not association.empty:
+        association.to_csv(association_path, index=False)
+        outputs["fiscal_growth_association"] = association_path
+
+    plot_fiscal_context(panel, fiscal_figure_path, dpi=config.plots.dpi)
+    plot_tax_event_growth_windows(event_windows, tax_figure_path, dpi=config.plots.dpi)
+    outputs["fiscal_context_figure"] = fiscal_figure_path
+    outputs["tax_event_growth_windows_figure"] = tax_figure_path
+    return outputs
 
 
 def export_article_assets(config: AppConfig) -> dict[str, Path]:

@@ -12,6 +12,27 @@ Bolt, Jutta and Jan Luiten van Zanden. Maddison style estimates of the evolution
 
 FRED series `GDPCA` is used as a validation source from 1929 onward. It reports annual United States real GDP in billions of chained 2017 dollars, sourced from the U.S. Bureau of Economic Analysis.
 
+## FRED / OMB fiscal ratios
+
+The fiscal context layer uses FRED-hosted annual federal budget and debt ratios
+derived from OMB historical tables and GDP. The current implementation loads
+gross federal debt, debt held by the public, federal receipts, federal outlays,
+federal surplus or deficit, and federal interest outlays as percent of GDP.
+
+These are used as contextual macro-fiscal variables. They are not instruments
+or exogenous policy shocks.
+
+## IRS tax-rate history
+
+The tax-regime event catalog is intentionally broad. IRS SOI Historical Table 23
+is the preferred reference for extending the project into statutory individual
+income-tax bracket rates and tax bases. That extension should be kept separate
+from the current event-window catalog because statutory rates and effective
+fiscal receipts answer different empirical questions.
+
 ## Practical implication
 
-Use Maddison for the full 1920-onward history. Use FRED/BEA for the modern national-account overlap. The article should report any relevant difference between the two growth-rate series before drawing regime conclusions.
+Use Maddison for the full 1920-onward history. Use FRED/BEA for the modern
+national-account overlap. Use FRED/OMB fiscal ratios and tax-regime events as
+descriptive context, not causal proof. The article should report any relevant
+difference between the growth-rate series before drawing regime conclusions.

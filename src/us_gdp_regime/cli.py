@@ -11,6 +11,7 @@ from us_gdp_regime.config import load_config
 from us_gdp_regime.pipeline import download_data as pipeline_download_data
 from us_gdp_regime.pipeline import fit_models as pipeline_fit_models
 from us_gdp_regime.pipeline import make_figures as pipeline_make_figures
+from us_gdp_regime.pipeline import make_fiscal_context as pipeline_make_fiscal_context
 from us_gdp_regime.pipeline import prepare_data as pipeline_prepare_data
 from us_gdp_regime.pipeline import run_pipeline
 
@@ -55,6 +56,14 @@ def make_figures(
 ) -> None:
     """Create article-ready figures."""
     _print_outputs(pipeline_make_figures(load_config(config)))
+
+
+@app.command("make-fiscal-context")
+def make_fiscal_context(
+    config: ConfigOption = Path("config/default.yaml"),
+) -> None:
+    """Create optional public-debt, federal budget, and tax-regime context outputs."""
+    _print_outputs(pipeline_make_fiscal_context(load_config(config)))
 
 
 @app.command()

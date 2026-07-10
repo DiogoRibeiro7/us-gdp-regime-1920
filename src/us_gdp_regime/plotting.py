@@ -518,3 +518,134 @@ def plot_break_sensitivity(
     fig.subplots_adjust(left=0.075, right=0.98, top=0.80, bottom=0.16)
     _save(fig, output_path, dpi)
     return output_path
+
+
+def plot_fiscal_context(panel: pd.DataFrame, output_path: Path, dpi: int = 160) -> Path:
+    """Create a fiscal context chart for GDP growth, debt, and budget ratios."""
+    required = {"year", "gdp_growth"}
+    missing = required.difference(panel.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    _apply_theme()
+    work = panel.sort_values("year").copy()
+    fig, axes = plt.subplots(3, 1, figsize=(14.5, 10.5), sharex=True)
+    _title(
+        fig,
+        "Fiscal context adds debt, receipts, outlays, and deficits to GDP regimes",
+        "Federal fiscal ratios are shown against annual GDP growth; "
+        "this is descriptive timing evidence.",
+    )
+    for ax in axes:
+        _style_axis(ax)
+
+    growth = work.dropna(subset=["gdp_growth"])
+    colors = np.where(growth["gdp_growth"] >= 0, PALETTE["green"], PALETTE["red"])
+    axes[0].bar(growth["year"], growth["gdp_growth"], color=colors, width=0.82, alpha=0.82)
+    axes[0].axhline(0, color=PALETTE["ink"], linewidth=1.0)
+    axes[0].set_ylabel("GDP growth")
+    axes[0].set_title("Annual real GDP growth", loc="left", fontsize=12.5, weight="bold")
+    axes[0].yaxis.set_major_formatter(_percent_formatter())
+
+    debt_lines = [
+        ("gross_debt_gdp", "Gross federal debt / GDP", PALETTE["blue"]),
+        ("public_debt_gdp", "Debt held by public / GDP", PALETTE["orange"]),
+    ]
+    for column, label, color in debt_lines:
+        if column in work.columns:
+            axes[1].plot(work["year"], work[column], color=color, linewidth=2.5, label=label)
+    axes[1].set_ylabel("Debt / GDP")
+    axes[1].set_title("Federal debt burden", loc="left", fontsize=12.5, weight="bold")
+    axes[1].yaxis.set_major_formatter(_percent_formatter())
+    axes[1].legend(loc="upper left", ncols=2)
+
+    budget_lines = [
+        ("receipts_gdp", "Receipts / GDP", PALETTE["green"]),
+        ("outlays_gdp", "Outlays / GDP", PALETTE["red"]),
+        ("deficit_gdp", "Surplus or deficit / GDP", PALETTE["blue"]),
+        ("interest_gdp", "Interest outlays / GDP", PALETTE["gold"]),
+    ]
+    for column, label, color in budget_lines:
+        if column in work.columns:
+            axes[2].plot(work["year"], work[column], color=color, linewidth=2.1, label=label)
+    axes[2].axhline(0, color=PALETTE["ink"], linewidth=0.9, alpha=0.55)
+    axes[2].set_xlabel("Year")
+    axes[2].set_ylabel("Percent of GDP")
+    axes[2].set_title("Federal budget ratios", loc="left", fontsize=12.5, weight="bold")
+    axes[2].yaxis.set_major_formatter(_percent_formatter())
+    axes[2].legend(loc="upper left", ncols=4)
+
+    _source_note(
+        fig,
+        "Sources: Maddison GDP growth; FRED/OMB federal fiscal ratios. "
+        "Fiscal timing is not causal identification.",
+    )
+    fig.subplots_adjust(left=0.075, right=0.98, top=0.88, bottom=0.08, hspace=0.24)
+    _save(fig, output_path, dpi)
+    return output_path
+
+
+def plot_tax_event_growth_windows(
+    event_study: pd.DataFrame,
+    output_path: Path,
+    dpi: int = 160,
+) -> Path:
+    """Plot post-minus-pre GDP growth around broad federal tax-regime events."""
+    required = {"year", "event", "direction", "event_window_minus_pre"}
+    missing = required.difference(event_study.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    _apply_theme()
+    work = event_study.dropna(subset=["event_window_minus_pre"]).sort_values("year").copy()
+    labels = work["year"].astype(int).astype(str) + "  " + work["event"].astype(str)
+    direction_colors = {
+        "increase": PALETTE["red"],
+        "decrease": PALETTE["green"],
+        "mixed": PALETTE["blue"],
+        "base_broadening": PALETTE["orange"],
+    }
+    colors = [
+        direction_colors.get(str(direction), PALETTE["muted"])
+        for direction in work["direction"]
+    ]
+
+    fig_height = max(7.2, 0.45 * len(work) + 2.2)
+    fig, ax = plt.subplots(figsize=(13.5, fig_height))
+    _title(
+        fig,
+        "GDP growth around major tax-regime changes varies widely",
+        "Bars show event-window average growth minus the pre-event average; "
+        "the window is descriptive.",
+    )
+    _style_axis(ax)
+    positions = np.arange(len(work))
+    ax.barh(positions, work["event_window_minus_pre"], color=colors, alpha=0.88)
+    ax.axvline(0, color=PALETTE["ink"], linewidth=1.0)
+    ax.set_yticks(positions)
+    ax.set_yticklabels(labels, fontsize=9)
+    ax.invert_yaxis()
+    ax.xaxis.set_major_formatter(_percent_formatter())
+    ax.set_xlabel("Event-window average growth minus pre-event average")
+    ax.set_ylabel("")
+
+    for y_position, value in zip(positions, work["event_window_minus_pre"], strict=True):
+        x_offset = 0.15
+        ax.text(
+            float(value) + x_offset,
+            float(y_position),
+            f"{float(value):+.1f} pp",
+            va="center",
+            ha="left",
+            fontsize=8.5,
+            color=PALETTE["ink"],
+        )
+
+    _source_note(
+        fig,
+        "Sources: Maddison GDP growth; curated federal tax-law event catalog. "
+        "Event windows do not estimate causal tax effects.",
+    )
+    fig.subplots_adjust(left=0.31, right=0.97, top=0.87, bottom=0.10)
+    _save(fig, output_path, dpi)
+    return output_path

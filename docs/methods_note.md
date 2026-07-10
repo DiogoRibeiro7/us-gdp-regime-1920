@@ -43,6 +43,22 @@ The article should include at least four checks:
 3. Compare Maddison-derived growth rates with FRED/BEA growth rates from 1929 onward.
 4. Refit after excluding World War II years to test whether mobilisation dominates breakpoint selection.
 
+## Fiscal and tax-regime context
+
+The optional fiscal layer adds federal debt, receipts, outlays, deficit/surplus,
+and interest outlays as percent of GDP. These series are merged onto annual GDP
+growth by calendar year and summarized with:
+
+1. same-year fiscal/GDP-growth correlations,
+2. one-year-lag fiscal/GDP-growth correlations,
+3. a compact OLS association model using one-year-lag fiscal ratios,
+4. event windows around broad federal tax-regime changes.
+
+This layer is descriptive. Public debt, deficits, receipts, outlays, and tax law
+are endogenous to recessions, wars, inflation, monetary policy, and GDP itself.
+The fiscal tables can structure historical interpretation, but they do not
+identify causal tax or debt effects on GDP.
+
 ## Historical interpretation
 
 The regimes should be interpreted with historical care. Likely contextual periods include:

@@ -13,6 +13,7 @@ The workflow estimates:
 3. Piecewise constant growth regimes.
 4. Above-mean and below-mean periods.
 5. Article-ready tables and figures.
+6. Optional fiscal context: federal debt, budget ratios, and broad tax-regime event windows.
 
 ## Why not use World Bank only?
 
@@ -38,11 +39,22 @@ The scale of the total GDP proxy depends on the population units in the source, 
 - Series: annual real gross domestic product.
 - Units: billions of chained 2017 dollars.
 
+### Fiscal context sources
+
+- FRED/OMB annual federal fiscal ratios:
+  - gross federal debt as percent of GDP,
+  - debt held by the public as percent of GDP,
+  - federal receipts as percent of GDP,
+  - federal outlays as percent of GDP,
+  - federal surplus or deficit as percent of GDP,
+  - federal interest outlays as percent of GDP.
+- Broad federal tax-regime events are curated in code for descriptive event-window analysis.
+- IRS SOI Historical Table 23 is the natural next source for extending the tax layer into statutory individual income-tax bracket rates.
+
 ## Repository layout
 
 ```text
 .
-├── AGENTS.md
 ├── README.md
 ├── config/
 │   └── default.yaml
@@ -58,11 +70,8 @@ The scale of the total GDP proxy depends on the population units in the source, 
 ├── notebooks/
 │   ├── 01_data_extraction_validation.ipynb
 │   ├── 02_regression_piecewise_regimes.ipynb
-│   └── 03_article_figures_tables.ipynb
-├── prompts/
-│   ├── 01_code_development.md
-│   ├── 02_notebook_development.md
-│   └── 03_article_development.md
+│   ├── 03_article_figures_tables.ipynb
+│   └── 04_fiscal_debt_tax_context.ipynb
 ├── pyproject.toml
 ├── src/us_gdp_regime/
 └── tests/
@@ -119,11 +128,26 @@ us-gdp-regimes download-data --config config/default.yaml
 us-gdp-regimes prepare-data --config config/default.yaml
 us-gdp-regimes fit-models --config config/default.yaml
 us-gdp-regimes make-figures --config config/default.yaml
+us-gdp-regimes make-fiscal-context --config config/default.yaml
 us-gdp-regimes run --config config/default.yaml
 ```
 
 The CLI is intentionally thin: each command delegates to the pipeline module and
 prints the paths it generated.
+
+The fiscal command is optional. It downloads the required FRED/OMB fiscal CSVs
+when `source.download_if_missing` is true and writes:
+
+```text
+data/models/fiscal_ratios.csv
+data/models/fiscal_context.csv
+data/models/fiscal_growth_correlations.csv
+data/models/fiscal_growth_association.csv
+data/models/tax_regime_events.csv
+data/models/tax_event_growth_windows.csv
+figures/fiscal_context.png
+figures/tax_event_growth_windows.png
+```
 
 ## Run tests
 
@@ -153,9 +177,10 @@ Breakpoints are selected using dynamic programming over piecewise constant means
 - FRED/BEA is more official for the modern national accounts period but starts in 1929 for annual real GDP.
 - The Great Depression, World War II, postwar demobilisation, the Volcker period, the Global Financial Crisis, COVID-19, and the post-COVID recovery can generate large breakpoints. Do not interpret all statistical breaks as policy breaks without historical triangulation.
 - Above-mean and below-mean are descriptive labels, not causal claims.
+- Fiscal and tax-regime outputs are descriptive context. Public debt, deficits, receipts, outlays, and tax law respond to GDP shocks and policy choices, so simple correlations, regressions, and event windows should not be read as causal tax or debt effects.
 
 ## Suggested article question
 
 > The United States did not grow at one constant speed after 1920. Its growth history is better read as a sequence of regimes: depression, mobilisation, postwar expansion, productivity slowdown, financial crisis, and pandemic-era disruption.
 
-Use the files in `prompts/` to instruct a coding agent, notebook agent, or writing agent to develop the project further.
+Use the notebooks and generated article assets to develop the project further.
