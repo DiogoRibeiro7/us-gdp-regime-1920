@@ -261,12 +261,18 @@ def load_fred_annual_real_gdp(
         raise FileNotFoundError(f"FRED CSV file not found: {csv_path}")
 
     work = pd.read_csv(csv_path)
-    if "DATE" not in work.columns or series_id not in work.columns:
-        raise DataSourceError(f"Expected columns DATE and {series_id} in FRED CSV.")
+    column_lookup = {str(column).strip().lower(): column for column in work.columns}
+    date_column = column_lookup.get("date", column_lookup.get("observation_date"))
+    series_column = column_lookup.get(series_id.lower())
+    if date_column is None or series_column is None:
+        raise DataSourceError(
+            f"Expected a DATE/observation_date column and {series_id} in FRED CSV. "
+            f"Available columns are {list(work.columns)}."
+        )
 
-    out = work[["DATE", series_id]].copy()
-    out = out.rename(columns={series_id: "real_gdp"})
-    out["year"] = pd.to_datetime(out["DATE"]).dt.year
+    out = work[[date_column, series_column]].copy()
+    out = out.rename(columns={series_column: "real_gdp"})
+    out["year"] = pd.to_datetime(out[date_column]).dt.year
     out["real_gdp"] = pd.to_numeric(out["real_gdp"], errors="coerce")
     out = out.dropna(subset=["real_gdp"])
     out = out.loc[out["year"] >= start_year]

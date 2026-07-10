@@ -87,3 +87,18 @@ def test_load_fred_annual_real_gdp_from_synthetic_csv(tmp_path: Path) -> None:
 
     assert list(out["year"]) == [1929, 1930, 1931]
     assert round(float(out.loc[1, "gdp_growth"]), 3) == -10.0
+
+
+def test_load_fred_accepts_observation_date_header(tmp_path: Path) -> None:
+    csv_path = tmp_path / "fred_GDPCA.csv"
+    pd.DataFrame(
+        {
+            "observation_date": ["1929-01-01", "1930-01-01"],
+            "GDPCA": [100.0, 105.0],
+        }
+    ).to_csv(csv_path, index=False)
+
+    out = load_fred_annual_real_gdp(csv_path)
+
+    assert list(out["year"]) == [1929, 1930]
+    assert round(float(out.loc[1, "gdp_growth"]), 3) == 5.0
