@@ -1,0 +1,31 @@
+project:
+  country_name: "United States"
+  country_code_maddison: "USA"
+  start_year: 1920
+  end_year: null
+
+paths:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  models_dir: "data/models"
+  figures_dir: "figures"
+
+source:
+  primary: "maddison"
+  download_if_missing: true
+  maddison:
+    doi: "doi:10.34894/INZBF2"
+    dataverse_base_url: "https://dataverse.nl"
+    local_excel_path: null
+  fred:
+    series_id: "GDPCA"
+    csv_url: "https://fred.stlouisfed.org/graph/fredgraph.csv?id=GDPCA"
+
+model:
+  min_segment_size: 5
+  max_breaks: 8
+  criterion: "bic"
+  compare_with_fred: true
+
+plots:
+  dpi: 160

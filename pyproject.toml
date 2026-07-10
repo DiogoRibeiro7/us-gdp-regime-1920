@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "us-gdp-regime"
+version = "0.1.0"
+description = "United States GDP trend and piecewise growth regime analysis from 1920 onward."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Diogo Ribeiro" }]
+dependencies = [
+    "matplotlib>=3.8",
+    "numpy>=1.26",
+    "openpyxl>=3.1",
+    "pandas>=2.2",
+    "pyyaml>=6.0",
+    "requests>=2.32",
+    "scikit-learn>=1.4",
+    "statsmodels>=0.14",
+    "typer>=0.12",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+notebooks = [
+    "jupyterlab>=4.2",
+    "nbformat>=5.10",
+]
+
+[project.scripts]
+us-gdp-regimes = "us_gdp_regime.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "N", "ANN"]
+ignore = ["ANN101", "ANN102"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
