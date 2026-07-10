@@ -11,6 +11,17 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from matplotlib.ticker import FuncFormatter, MaxNLocator
+
+VALIDATION_COLORS = {
+    "ink": "#17202A",
+    "muted": "#5D6D7E",
+    "grid": "#DDE3EA",
+    "blue": "#2457A6",
+    "orange": "#E67E22",
+    "red": "#B23B3B",
+    "gold": "#C49A21",
+}
 
 
 def build_growth_comparison(
@@ -93,37 +104,122 @@ def plot_growth_comparison(
     dpi: int = 160,
 ) -> Path:
     """Plot overlapping Maddison and FRED annual growth rates."""
+    plt.rcParams.update(
+        {
+            "figure.facecolor": "white",
+            "axes.facecolor": "#FBFCFE",
+            "axes.edgecolor": VALIDATION_COLORS["grid"],
+            "axes.labelcolor": VALIDATION_COLORS["ink"],
+            "xtick.color": VALIDATION_COLORS["muted"],
+            "ytick.color": VALIDATION_COLORS["muted"],
+            "font.size": 11,
+            "legend.frameon": False,
+        }
+    )
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fig, ax = plt.subplots(figsize=(12, 6))
+    work = comparison.copy()
+    work["abs_growth_difference"] = work["growth_difference"].abs()
+    summary = summarize_growth_comparison(work).iloc[0]
+
+    fig, (ax, diff_ax) = plt.subplots(
+        2,
+        1,
+        figsize=(14, 8.2),
+        sharex=True,
+        gridspec_kw={"height_ratios": [3.0, 1.15], "hspace": 0.08},
+    )
+    fig.text(
+        0.075,
+        0.965,
+        "Maddison and FRED/BEA growth rates move closely together",
+        ha="left",
+        va="top",
+        fontsize=19,
+        weight="bold",
+        color=VALIDATION_COLORS["ink"],
+    )
+    fig.text(
+        0.075,
+        0.925,
+        "Top: overlapping annual growth rates. Bottom: absolute percentage-point gap.",
+        ha="left",
+        va="top",
+        fontsize=11,
+        color=VALIDATION_COLORS["muted"],
+    )
+
+    for axis in (ax, diff_ax):
+        axis.grid(axis="y", color=VALIDATION_COLORS["grid"], linewidth=0.9, alpha=0.9)
+        axis.grid(axis="x", color=VALIDATION_COLORS["grid"], linewidth=0.6, alpha=0.35)
+        axis.spines["top"].set_visible(False)
+        axis.spines["right"].set_visible(False)
+        axis.spines["left"].set_color(VALIDATION_COLORS["grid"])
+        axis.spines["bottom"].set_color(VALIDATION_COLORS["grid"])
+        axis.tick_params(length=0)
+        axis.xaxis.set_major_locator(MaxNLocator(integer=True, nbins=9))
+
     ax.plot(
         comparison["year"],
         comparison["growth_maddison"],
         marker="o",
-        linewidth=1.2,
-        label="Maddison-derived real GDP growth",
+        markersize=3.8,
+        markerfacecolor="white",
+        markeredgewidth=1.1,
+        linewidth=2.0,
+        color=VALIDATION_COLORS["blue"],
+        label="Maddison-derived growth",
     )
     ax.plot(
         comparison["year"],
         comparison["growth_fred"],
         marker="o",
-        linewidth=1.2,
+        markersize=3.8,
+        markerfacecolor="white",
+        markeredgewidth=1.1,
+        linewidth=2.0,
+        color=VALIDATION_COLORS["orange"],
         label="FRED/BEA GDPCA growth",
     )
-    ax.axhline(0.0, color="black", linewidth=0.8, alpha=0.6)
-    ax.set_title("United States real GDP growth: Maddison versus FRED/BEA")
-    ax.set_xlabel("Year")
-    ax.set_ylabel("Annual real GDP growth, %")
-    ax.grid(alpha=0.3)
-    ax.legend()
+    ax.axhline(0.0, color=VALIDATION_COLORS["ink"], linewidth=0.9, alpha=0.65)
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:.0f}%"))
+    ax.set_ylabel("Annual real GDP growth")
+    ax.legend(loc="upper right", ncols=2)
     ax.text(
-        0.01,
-        -0.18,
-        "Sources: Maddison Project Database 2023; FRED/BEA GDPCA.",
+        0.02,
+        0.08,
+        f"Correlation: {summary['growth_correlation']:.3f}\n"
+        f"Mean abs. gap: {summary['mean_absolute_difference']:.2f} pp\n"
+        f"RMSE: {summary['root_mean_squared_difference']:.2f} pp",
         transform=ax.transAxes,
-        fontsize=9,
+        fontsize=10,
+        color=VALIDATION_COLORS["ink"],
+        bbox={
+            "boxstyle": "round,pad=0.45",
+            "facecolor": "white",
+            "edgecolor": VALIDATION_COLORS["grid"],
+        },
     )
-    fig.tight_layout()
-    fig.savefig(output_path, dpi=dpi)
+
+    diff_ax.bar(
+        work["year"],
+        work["abs_growth_difference"],
+        color=VALIDATION_COLORS["gold"],
+        alpha=0.82,
+        width=0.82,
+    )
+    diff_ax.set_ylabel("Abs. gap")
+    diff_ax.set_xlabel("Year")
+    diff_ax.yaxis.set_major_formatter(FuncFormatter(lambda value, _: f"{value:.0f} pp"))
+
+    fig.text(
+        0.075,
+        0.035,
+        "Sources: Maddison Project Database 2023; FRED/BEA GDPCA.",
+        fontsize=9,
+        color=VALIDATION_COLORS["muted"],
+    )
+    fig.subplots_adjust(left=0.075, right=0.98, top=0.86, bottom=0.12)
+    fig.savefig(output_path, dpi=dpi, bbox_inches="tight")
     plt.close(fig)
     return output_path

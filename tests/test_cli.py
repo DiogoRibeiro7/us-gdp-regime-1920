@@ -3,12 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 import pandas as pd
+import pytest
 from typer.testing import CliRunner
 
 from us_gdp_regime.cli import app
 
 
-def test_cli_run_smoke_with_synthetic_local_dataset(tmp_path: Path) -> None:
+def test_cli_run_smoke_with_synthetic_local_dataset(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     excel_path = tmp_path / "maddison.xlsx"
     config_path = tmp_path / "config.yaml"
     pd.DataFrame(
@@ -53,8 +57,8 @@ plots:
     )
 
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        result = runner.invoke(app, ["run", "--config", str(config_path)])
+    monkeypatch.chdir(tmp_path)
+    result = runner.invoke(app, ["run", "--config", str(config_path)])
 
     assert result.exit_code == 0
     assert (tmp_path / "processed" / "us_gdp_series.csv").exists()

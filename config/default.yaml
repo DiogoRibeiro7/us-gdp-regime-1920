@@ -28,4 +28,4 @@ model:
   compare_with_fred: true
 
 plots:
-  dpi: 160
+  dpi: 220
