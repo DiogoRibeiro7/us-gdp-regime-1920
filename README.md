@@ -229,6 +229,26 @@ growth_t = mu_j + error_t, for t in regime j
 
 Breakpoints are selected using dynamic programming over piecewise constant means and a BIC-style penalty. Each segment is labelled as above or below the full-sample mean annual growth rate.
 
+## Adapting this to another country
+
+The methodology is country-agnostic; only the data sources and the historical
+narrative change. To replicate the analysis for another economy:
+
+- Set `project.country_name` and `project.country_code_maddison` in
+  `config/default.yaml` (e.g. `PRT` for Portugal) — Maddison provides the
+  long-run 1920-onward series for most countries.
+- Swap the modern validation series (here FRED/BEA `GDPCA`) for a national
+  accounts equivalent (e.g. Eurostat, AMECO, OECD, or a Penn World Table series
+  on FRED), and swap the fiscal ratios for the relevant general-government
+  series.
+- Replace the curated tax-regime event catalog and the distributional sources
+  with country-specific ones, and re-write the historical interpretation for
+  that country's path.
+
+The estimation code (trend and unit-root diagnostics, recursive piecewise
+regimes, bootstrap break inference, robustness, local projections, and the
+macro-driven report) is reused unchanged.
+
 ## Important caveats
 
 - Maddison is appropriate for long-run history, but it is not identical to modern BEA national accounts.
