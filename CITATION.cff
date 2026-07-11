@@ -22,7 +22,7 @@ authors:
     email: dfr@esmad.ipp.pt
     orcid: "https://orcid.org/0009-0001-2022-7072"
     affiliation: "ESMAD, Instituto Politécnico do Porto"
-version: 1.1.0
+version: 1.1.1
 date-released: "2026-07-11"
 license: CC-BY-4.0
 repository-code: "https://github.com/DiogoRibeiro7/us-gdp-regime-1920"

@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-07-11
+
+### Fixed
+
+- CI: let mypy target the running interpreter instead of pinning
+  `python_version = "3.11"`, so it can parse newer numpy stubs that use the
+  PEP 695 `type` statement on the Python 3.12/3.13 matrix runners.
+
 ## [1.1.0] — 2026-07-11
 
 ### Added
@@ -52,6 +60,7 @@ First public release, archived on Zenodo
 - Academic LaTeX report, Medium-style article, notebooks, tests, CI, and Zenodo
   publishing metadata (CC-BY-4.0 license, `CITATION.cff`, `.zenodo.json`).
 
-[Unreleased]: https://github.com/DiogoRibeiro7/us-gdp-regime-1920/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/DiogoRibeiro7/us-gdp-regime-1920/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/DiogoRibeiro7/us-gdp-regime-1920/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/DiogoRibeiro7/us-gdp-regime-1920/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/DiogoRibeiro7/us-gdp-regime-1920/releases/tag/v1.0.0
