@@ -275,8 +275,8 @@ If you use this software or its results, please cite the archived release. Machi
 cite via the DOI. Example:
 
 > Ribeiro, D. (2026). *Growth Regimes in the United States since 1920: Structural
-> Breaks, Fiscal Structure, and the Productivity-Pay Divergence* (v1.1.0). Zenodo.
-> https://doi.org/10.5281/zenodo.21302724
+> Breaks, Fiscal Structure, and the Productivity-Pay Divergence* (v1.1.1). Zenodo.
+> https://doi.org/10.5281/zenodo.21303227
 
 The concept DOI [10.5281/zenodo.21302054](https://doi.org/10.5281/zenodo.21302054)
 always resolves to the latest version.
